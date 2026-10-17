@@ -507,8 +507,9 @@ def render_song(sy, spec):
 class Audio:
     MUSIC_CH = len(STEMS)
 
-    def __init__(self, muted=False):
-        self.muted = muted
+    def __init__(self, music=8, sfx=7):
+        self.music_level = music / 10.0
+        self.sfx_level = sfx / 10.0
         self.ok = False
         self.sounds = {}
         self.jingles = {}
@@ -591,15 +592,13 @@ class Audio:
         return True
 
     # ------------------------------------------------------------ public API
-    def set_muted(self, m):
-        self.muted = m
-        if self.ok and m:
-            for b in range(2):
-                for ch in self.chans[b]:
-                    ch.set_volume(0)
+    def set_volumes(self, music, sfx):
+        """Music and effects have separate volumes, each 0..10."""
+        self.music_level = max(0, min(10, music)) / 10.0
+        self.sfx_level = max(0, min(10, sfx)) / 10.0
 
     def sfx(self, name, vol=1.0):
-        if not self.ok or self.muted:
+        if not self.ok or self.sfx_level <= 0:
             return
         s = self.sounds.get(name)
         if s is None:
@@ -610,16 +609,16 @@ class Audio:
         self.last[name] = self.frame
         ch = s.play()
         if ch is not None:
-            ch.set_volume(SFX_VOL * vol * (0.5 if name == 'shot' else 1.0))
+            ch.set_volume(SFX_VOL * self.sfx_level * vol * (0.3 if name == 'shot' else 1.0))
 
     def jingle(self, name):
-        if not self.ok or self.muted:
+        if not self.ok or self.music_level <= 0:
             return
         s = self.jingles.get(name)
         if s is not None:
             ch = s.play()
             if ch is not None:
-                ch.set_volume(SFX_VOL)
+                ch.set_volume(SFX_VOL * self.music_level)
 
     def play_music(self, key):
         if not self.ok:
@@ -693,5 +692,5 @@ class Audio:
                 cur = self.vol[b][s]
                 cur += (mix[s] - cur) * 0.035
                 self.vol[b][s] = cur
-                v = 0.0 if self.muted else cur * self.master[b] * MUSIC_VOL
+                v = cur * self.master[b] * MUSIC_VOL * self.music_level
                 self.chans[b][i].set_volume(v)

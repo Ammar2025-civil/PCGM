@@ -29,7 +29,8 @@ def default_save():
         stars={},
         best={},
         deaths={},
-        muted=False,
+        music_vol=8,
+        sfx_vol=7,
         total_kills=0,
         golden=0,
         complete=False,
@@ -120,7 +121,9 @@ def validate(raw):
     d['stars'] = _level_map(raw.get('stars'), 0, 7)
     d['best'] = _level_map(raw.get('best'), 0, 10 ** 12)
     d['deaths'] = _level_map(raw.get('deaths'), 0, 10 ** 6)
-    d['muted'] = bool(raw.get('muted', False))
+    old_mute = raw.get('muted') is True          # saves from before the volume sliders
+    d['music_vol'] = _int(raw.get('music_vol'), 0, 10, 0 if old_mute else 8)
+    d['sfx_vol'] = _int(raw.get('sfx_vol'), 0, 10, 0 if old_mute else 7)
     d['total_kills'] = _int(raw.get('total_kills'), 0, 10 ** 12, 0)
     d['golden'] = _int(raw.get('golden'), 0, 10 ** 9, 0)
     d['complete'] = bool(raw.get('complete', False))

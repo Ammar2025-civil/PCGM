@@ -26,7 +26,7 @@ HULLS = [
     dict(id='prospector', name='PROSPECTOR', unlock=2, hp=0, speed=1.0, dmg=0.95, rate=1.0, magnet=1.7,
          credit_mult=1.15, desc='HUGE MAGNET, +15% CREDITS'),
     dict(id='wraith', name='WRAITH', unlock=3, hp=-1, speed=1.15, dmg=1.05, rate=1.0, magnet=1.0,
-         hitbox=1.4, graze=18, desc='TINY CORE, BIG GRAZE, FRAGILE'),
+         hitbox=1.4, graze=22, desc='TINY CORE, BIG GRAZE, FRAGILE'),
     dict(id='prism', name='PRISM', unlock=4, hp=0, speed=1.0, dmg=1.0, rate=1.0, magnet=1.0,
          start={'laser': 1}, desc='STARTS WITH A LASER'),
     dict(id='helios', name='HELIOS', unlock=5, hp=0, speed=1.0, dmg=0.95, rate=0.82, magnet=1.0,
@@ -42,7 +42,7 @@ HULLS = [
     dict(id='sovereign', name='SOVEREIGN', unlock=10, hp=1, speed=1.05, dmg=1.15, rate=0.9, magnet=1.2,
          start={'spread': 3}, desc='ELITE: SPREAD 3 FROM THE START'),
     dict(id='starborn', name='STARBORN', unlock='stars', hp=1, speed=1.1, dmg=1.1, rate=0.92, magnet=1.4,
-         start={'drone': 1, 'wing': 1}, graze=16, desc='STAR REWARD: DRONE + WING GUNS'),
+         start={'drone': 1, 'wing': 1}, graze=19, desc='STAR REWARD: DRONE + WING GUNS'),
 ]
 HULL_BY_ID = {h['id']: h for h in HULLS}
 

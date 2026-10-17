@@ -137,7 +137,7 @@ SECTORS = {
                  'minelayer': 1, 'kamikaze': 1},
         patterns={'column': 3, 'v': 2, 'line': 2, 'hover': 2, 'turrets': 2, 'snake': 1, 'ambush': 1,
                   'rush': 1},
-        miniboss='secdrone', boss='warden', tune=dict(density=0.75, fire_rate=0.8),
+        miniboss='secdrone', boss='warden', tune=dict(density=0.9, fire_rate=1.0),
     ),
     7: dict(
         name='BLACK HOLE RIM', mechanic='gravity',
@@ -146,7 +146,7 @@ SECTORS = {
                  'sniper': 2, 'shielded': 1, 'minelayer': 1},
         patterns={'circle': 3, 'swoop': 2, 'sine': 2, 'snake': 2, 'hover': 2, 'v': 1, 'line': 1,
                   'ambush': 1, 'rush': 1},
-        miniboss='graviton', boss='horizon', tune=dict(density=1.18, fire_rate=1.15, boss_hp=1.35),
+        miniboss='graviton', boss='horizon', tune=dict(density=1.35, fire_rate=1.45, boss_hp=1.35),
     ),
     8: dict(
         name='ALIEN HIVE', mechanic='hive',
@@ -155,7 +155,7 @@ SECTORS = {
                  'sniper': 1, 'shielded': 1, 'minelayer': 1},
         patterns={'nests': 3, 'rush': 2, 'rain': 2, 'swoop': 2, 'snake': 2, 'v': 1, 'hover': 1,
                   'ambush': 1, 'pincer': 1},
-        miniboss='brood', boss='queen', tune=dict(density=1.12, fire_rate=1.2, boss_hp=1.45),
+        miniboss='brood', boss='queen', tune=dict(density=1.2, fire_rate=1.35, boss_hp=1.45),
     ),
     9: dict(
         name='WORMHOLE', mechanic='wormhole',
@@ -164,7 +164,7 @@ SECTORS = {
                  'sniper': 1, 'shielded': 1, 'minelayer': 1},
         patterns={'snake': 2, 'swoop': 2, 'v': 2, 'circle': 2, 'sine': 2, 'rush': 2, 'hover': 1,
                   'ambush': 1, 'pincer': 1, 'line': 1},
-        miniboss='stalker', boss='phantom',
+        miniboss='stalker', boss='phantom', tune=dict(density=1.1, fire_rate=1.2),
     ),
     10: dict(
         name='MOTHERSHIP CORE', mechanic='remix',
@@ -188,4 +188,10 @@ LEVEL_OVERRIDES = {
     1: dict(density=0.6, fire_rate=0.6, acts=3, golden=True),
     2: dict(density=0.8, fire_rate=0.8),
     3: dict(density=0.9),
+    # bosses with many or wide hit zones go down faster than the rest
+    10: dict(boss_hp=1.5),
+    15: dict(boss_hp=1.3),
+    25: dict(boss_hp=1.3),
+    30: dict(boss_hp=2.0),
+    60: dict(boss_hp=1.4),
 }

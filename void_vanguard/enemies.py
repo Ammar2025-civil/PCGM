@@ -24,10 +24,11 @@ ARCH = {
     'larva':     dict(hp=2, score=60, credits=0, fire=None, contact=True),
     'mini':      dict(hp=2, score=60, credits=1, fire=None, contact=True),
     'turret':    dict(hp=20, score=400, credits=7, fire='burst', interval=100),
-    'nest':      dict(hp=70, score=1500, credits=14, fire='spawn', interval=110),
+    'nest':      dict(hp=95, score=1500, credits=14, fire='spawn', interval=110),
     'asteroid':  dict(hp=6, score=50, credits=0, fire=None, contact=True),
 }
 NO_KILL_COUNT = {'mini', 'larva', 'asteroid', 'golden'}
+TOP = -26      # spawn height just above the playfield (sprites are drawn at 2x detail)
 
 
 class Enemy:
@@ -58,8 +59,8 @@ class Enemy:
             self.spr = self.spr_frames[0]
         else:
             self.spr = art.enemy_sprite(kind, game.sector)
-        self.w = self.spr.get_width() * 0.8
-        self.h = self.spr.get_height() * 0.8
+        self.w = self.spr.get_width() * 0.72
+        self.h = self.spr.get_height() * 0.72
         self.flash = 0
         self.alive = True
         self.escaped = False
@@ -190,19 +191,19 @@ class Enemy:
         surf.blit(s, (x, y))
         if self.kind == 'shielded':
             col = (120, 200, 255) if self.deflect_t == 0 else WHITE
-            yy = int(self.y + self.h / 2 + 3)
-            pygame.draw.arc(surf, col, (int(self.x) - 9, yy - 8, 18, 10), math.pi * 1.1, math.pi * 1.9, 2)
+            yy = int(self.y + self.h / 2 + 6)
+            pygame.draw.arc(surf, col, (int(self.x) - 17, yy - 14, 34, 18), math.pi * 1.1, math.pi * 1.9, 3)
         elif self.kind == 'turret' and self.game.player.alive:
             p = self.game.player
             a = math.atan2(p.y - self.y, p.x - self.x)
             pygame.draw.line(surf, (40, 36, 56), (int(self.x), int(self.y)),
-                             (int(self.x + math.cos(a) * 9), int(self.y + math.sin(a) * 9)), 4)
+                             (int(self.x + math.cos(a) * 16), int(self.y + math.sin(a) * 16)), 7)
             pygame.draw.line(surf, (190, 190, 210), (int(self.x), int(self.y)),
-                             (int(self.x + math.cos(a) * 8), int(self.y + math.sin(a) * 8)), 2)
+                             (int(self.x + math.cos(a) * 15), int(self.y + math.sin(a) * 15)), 3)
         elif self.kind == 'nest':
             pulse = (self.t // 10) % 2
             if pulse:
-                pygame.draw.circle(surf, (255, 90, 90), (int(self.x), int(self.y) - 1), 3)
+                pygame.draw.circle(surf, (255, 90, 90), (int(self.x), int(self.y) - 2), 6)
 
 
 # ====================================================================== paths
@@ -384,7 +385,7 @@ def p_wall(e, g, side):
     while True:
         e.y += g.scroll
         lo, hi = g.hazards.corridor_at(e.y) if g.hazards else (0, PF_W)
-        e.x = (lo + 7) if side < 0 else (hi - 7)
+        e.x = (lo + 14) if side < 0 else (hi - 14)
         yield
 
 
@@ -429,7 +430,7 @@ def make_drift(vx, vy):
 
 def p_snake(e, g, idx, vy=1.25, amp=70, freq=0.025):
     x0 = PF_W / 2
-    t = -idx * 14
+    t = -idx * 18
     while True:
         t += 1
         e.y += vy * g.scroll_mult
@@ -460,28 +461,29 @@ def spawn_wave(g, w):
             make()
 
     if pat == 'v':
-        cx = w.get('x', rnd.uniform(70, PF_W - 70))
+        cx = w.get('x', rnd.uniform(90, PF_W - 90))
         path = make_dive(1.5, 0.02) if kind in ('dart', 'kamikaze') else make_straight(0, 1.2)
         for i in range(n):
             k = (i + 1) // 2
             s = -1 if i % 2 else 1
-            add(kind, cx + s * k * 15, -14 - k * 12, path)
+            add(kind, cx + s * k * 26, TOP - k * 20, path)
     elif pat == 'line':
+        n = min(n, 8)
         gap = PF_W / (n + 1)
         for i in range(n):
-            add(kind, gap * (i + 1), -14, make_straight(0, 0.9), i * 4)
+            add(kind, gap * (i + 1), TOP, make_straight(0, 0.9), i * 4)
     elif pat == 'column':
         x = w.get('x', rnd.uniform(40, PF_W - 40))
         path = make_dive(1.8, 0.04) if kind in ('dart',) else make_straight(0, 1.5)
         for i in range(n):
-            add(kind, x, -14, path, i * 14)
+            add(kind, x, TOP, path, i * 22)
     elif pat == 'swoop':
-        rows = 1 if n <= 6 else 2
+        rows = max(1, math.ceil(n / 7))
         per = math.ceil(n / rows)
         hold = w.get('hold', 260)
         for i in range(n):
             r, c = divmod(i, per)
-            slot = (PF_W / 2 + (c - (per - 1) / 2) * 24, 52 + r * 22)
+            slot = (PF_W / 2 + (c - (per - 1) / 2) * 38, 58 + r * 34)
             sx = -20 if side < 0 else PF_W + 20
             start = (sx, 30 + r * 10)
             ctrl = (PF_W / 2 - side * 30, 190)
@@ -490,12 +492,12 @@ def spawn_wave(g, w):
                 (lambda st, ct, sl, hd: (lambda e, gg: p_swoop(e, gg, st, ct, sl, hd)))(start, ctrl, slot, hold + (n - i) * 9),
                 delay)
     elif pat == 'pincer':
-        half = max(1, n // 2)
+        half = max(1, min(4, n // 2))
         for s in (-1, 1):
             for i in range(half):
-                start = (-20 if s < 0 else PF_W + 20, 20)
+                start = (-24 if s < 0 else PF_W + 24, 20)
                 ctrl = (PF_W / 2, 140)
-                slot = (PF_W / 2 + s * (30 + i * 22), 70 + i * 6)
+                slot = (PF_W / 2 + s * (36 + i * 36), 70 + i * 10)
                 add(kind, start[0], start[1],
                     (lambda st, ct, sl: (lambda e, gg: p_swoop(e, gg, st, ct, sl, 90)))(start, ctrl, slot),
                     i * 10)
@@ -503,42 +505,43 @@ def spawn_wave(g, w):
         cx = w.get('x', PF_W / 2)
         for i in range(n):
             ph = -math.pi / 2
-            add(kind, cx, -14,
-                (lambda d: (lambda e, gg: p_circle(e, gg, cx, 110, 60, side, 1.25, ph)))(i),
-                i * 12)
+            add(kind, cx, TOP,
+                (lambda d: (lambda e, gg: p_circle(e, gg, cx, 115, 85, side, 1.25, ph)))(i),
+                i * 16)
     elif pat == 'snake':
-        amp = rnd.uniform(50, 95)
+        amp = rnd.uniform(60, 120)
         for i in range(n):
-            add(kind, PF_W / 2, -14, (lambda ii: (lambda e, gg: p_snake(e, gg, ii, 1.25, amp)))(i), i * 12)
+            add(kind, PF_W / 2, TOP, (lambda ii: (lambda e, gg: p_snake(e, gg, ii, 1.25, amp)))(i), i * 18)
     elif pat == 'wall':
+        n = min(max(n, 3), 9)
         gap_i = rnd.randrange(n)
         step = PF_W / n
         for i in range(n):
             if i == gap_i:
                 continue
-            add(kind, step * (i + 0.5), -14, make_straight(0, 1.0))
+            add(kind, step * (i + 0.5), TOP, make_straight(0, 1.0))
     elif pat == 'ambush':
         for i in range(n):
             x = 40 + rnd.uniform(0, PF_W - 80)
             g.warn_marker(x, PF_H - 10, 60)
-            add(kind, x, PF_H + 16, lambda e, gg: p_behind(e, gg, -1.5, 20), 60 + i * 16)
+            add(kind, x, PF_H + 26, lambda e, gg: p_behind(e, gg, -1.5, 20), 60 + i * 20)
     elif pat == 'hover':
         for i in range(n):
             x = PF_W * (i + 1) / (n + 1)
-            add(kind, x, -16, make_hover(50 + (i % 2) * 26, w.get('hold', 360), 34), i * 20)
+            add(kind, x, TOP, make_hover(50 + (i % 2) * 26, w.get('hold', 360), 34), i * 20)
     elif pat == 'rush':
         for i in range(n):
-            add(kind, rnd.uniform(20, PF_W - 20), -14,
+            add(kind, rnd.uniform(20, PF_W - 20), TOP,
                 (lambda sy: (lambda e, gg: p_kamikaze(e, gg, sy)))(rnd.uniform(30, 90)), i * 18)
     elif pat == 'rain':
         for i in range(n):
-            add(kind, rnd.uniform(16, PF_W - 16), -14, make_straight(rnd.uniform(-0.3, 0.3), rnd.uniform(1.4, 2.1)),
+            add(kind, rnd.uniform(16, PF_W - 16), TOP, make_straight(rnd.uniform(-0.3, 0.3), rnd.uniform(1.4, 2.1)),
                 i * 10)
     elif pat == 'sine':
         for i in range(n):
-            add(kind, PF_W / 2 + side * 60, -14, make_sine(1.0, 70, 0.028, i * 0.5), i * 14)
+            add(kind, PF_W / 2 + side * 80, TOP, make_sine(1.0, 90, 0.028, i * 0.5), i * 20)
     elif pat == 'single':
-        add(kind, w.get('x', rnd.uniform(50, PF_W - 50)), -18,
+        add(kind, w.get('x', rnd.uniform(50, PF_W - 50)), TOP,
             p_carrier if kind == 'carrier' else make_straight(0, 0.9))
     elif pat == 'nests':
         for i in range(n):
@@ -553,12 +556,12 @@ def spawn_wave(g, w):
             add('turret', 0, -12, (lambda ss: (lambda e, gg: p_wall(e, gg, ss)))(s), i * 40)
     else:
         for i in range(n):
-            add(kind, rnd.uniform(20, PF_W - 20), -14, make_straight(0, 1.3), i * 12)
+            add(kind, rnd.uniform(20, PF_W - 20), TOP, make_straight(0, 1.3), i * 12)
 
 
 def spawn_golden(g):
     side = random.choice((-1, 1))
-    e = Enemy(g, 'golden', -14 if side < 0 else PF_W + 14, 50, p_golden)
+    e = Enemy(g, 'golden', -26 if side < 0 else PF_W + 26, 50, p_golden)
     g.add_enemy(e)
     g.sfx('golden')
     g.banner('GOLDEN SHIP!', (255, 220, 80), 70)

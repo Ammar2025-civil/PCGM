@@ -54,6 +54,21 @@ def fmt(n):
     return '{:,}'.format(int(n))
 
 
+def wrap(text, width):
+    """Split text into lines that fit the given pixel width."""
+    lines, cur = [], ''
+    for word in text.split(' '):
+        trial = (cur + ' ' + word).strip()
+        if cur and art.text_width(trial) > width:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = trial
+    if cur:
+        lines.append(cur)
+    return lines
+
+
 def draw_panels(screen, g):
     ui = g.ui_color
     screen.blit(panel_bg(g.sector, 'l'), (0, 0))
@@ -71,18 +86,18 @@ def draw_panels(screen, g):
     col = MULT_COLORS[min(m - 1, len(MULT_COLORS) - 1)]
     pulse = 1 if (g.combo_t > COMBO_WINDOW - 8) else 0
     art.text(screen, '×%d' % m, x0 + 4, 64 - pulse, col, 4)
-    art.text(screen, '%d CHAIN' % g.combo, x0 + 74, 66, WHITE if g.combo else (90, 90, 120))
+    art.text(screen, '%d CHAIN' % g.combo, x0 + 60, 66, WHITE if g.combo else (90, 90, 120))
     nxt = COMBO_TIERS[m] if m < len(COMBO_TIERS) else None
-    art.text(screen, ('NEXT AT %d' % nxt) if nxt else 'MAX', x0 + 74, 78, (110, 110, 150))
+    art.text(screen, ('NEXT AT %d' % nxt) if nxt else 'MAX', x0 + 60, 78, (110, 110, 150))
     bar(screen, x0 + 4, 100, PANEL_W - 28, 5, g.combo_t / COMBO_WINDOW, col)
     art.text(screen, 'GRAZE %d' % g.stats['grazes'], x0 + 4, 110, (200, 200, 255))
-    bar(screen, x0 + 84, 111, PANEL_W - 108, 4, g.graze_meter / GRAZE_PER_BOMB, (255, 120, 120))
+    bar(screen, x0 + 80, 111, PANEL_W - 100, 4, g.graze_meter / GRAZE_PER_BOMB, (255, 120, 120))
 
     box(screen, (x0 - 2, 134, PANEL_W - 16, 98), ui, 'SHIP')
     art.text(screen, 'HULL', x0 + 4, 150, LABEL)
     for i in range(p.max_hp):
         ic = art.icon('heart', (255, 80, 110) if i < p.hp else (60, 40, 60))
-        screen.blit(ic, (x0 + 40 + (i % 10) * 12, 148 + (i // 10) * 10))
+        screen.blit(ic, (x0 + 38 + (i % 8) * 12, 146 + (i // 8) * 10))
     art.text(screen, 'SHIELD', x0 + 4, 172, LABEL)
     shield_n = p.shield if p.overdrive <= 0 else 0
     for i in range(max(shield_n, 1)):
@@ -92,8 +107,8 @@ def draw_panels(screen, g):
         art.text(screen, 'OFF', x0 + 66, 172, (255, 90, 90))
     art.text(screen, 'BOMBS', x0 + 4, 194, LABEL)
     for i in range(p.bombs):
-        screen.blit(art.icon('bomb', (255, 120, 90)), (x0 + 46 + i * 11, 192))
-    art.text(screen, 'SPACE', x0 + 4, 212, (90, 90, 120))
+        screen.blit(art.icon('bomb', (255, 120, 90)), (x0 + 44 + (i % 8) * 11, 192 + (i // 8) * 9))
+    art.text(screen, 'SPACE', x0 + 4, 214, (90, 90, 120))
 
     y = 240
     for label, t, mx, colr in (('OVERDRIVE', p.overdrive, 1200, (255, 70, 70)), ('BOUNTY', p.bounty, 1200, (200, 110, 255)),
@@ -134,13 +149,8 @@ def draw_panels(screen, g):
             ic = art.icon('star', (90, 90, 130))
         screen.blit(ic, (rx + 2, yy))
         tcol = (255, 230, 140) if done else ((120, 80, 90) if failed else (210, 210, 230))
-        words = ch['text']
-        if art.text_width(words) > rw - 16:
-            cut = words.rfind(' ', 0, 22)
-            art.text(screen, words[:cut], rx + 14, yy, tcol)
-            art.text(screen, words[cut + 1:], rx + 14, yy + 9, tcol)
-        else:
-            art.text(screen, words, rx + 14, yy, tcol)
+        for k, line in enumerate(wrap(ch['text'], rw - 16)[:2]):
+            art.text(screen, line, rx + 14, yy + k * 9, tcol)
         if prog and not done and not failed:
             art.text(screen, prog, rx + rw - 2, yy + 9, (130, 130, 170), align='r')
         if failed:

@@ -8,7 +8,7 @@ VERSION = "1.0"
 
 # Internal canvas. The window scales this up with crisp nearest-neighbour pixels.
 SCREEN_W, SCREEN_H = 640, 360
-PF_W, PF_H = 270, 360                 # playfield (centre column)
+PF_W, PF_H = 330, 360                 # playfield (centre column)
 PF_X = (SCREEN_W - PF_W) // 2         # left edge of the playfield on screen
 PANEL_W = PF_X                        # width of each side panel
 FPS = 60
@@ -20,7 +20,7 @@ SAVE_NAME = "savegame.json"
 PLAYER_BASE_SPEED = 2.35        # pixels per frame before upgrades
 PLAYER_SPEED_PER_LEVEL = 0.12   # added per speed upgrade
 PLAYER_HITBOX = 2.2             # radius of the tiny core that actually gets hit
-PLAYER_GRAZE = 13               # radius that counts as a graze
+PLAYER_GRAZE = 16               # radius that counts as a graze
 INVULN_FRAMES = 90              # mercy invulnerability after a hit
 BASE_FIRE_INTERVAL = 7          # frames between main cannon volleys
 MIN_FIRE_INTERVAL = 3

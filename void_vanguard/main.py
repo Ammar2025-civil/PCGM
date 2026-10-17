@@ -37,7 +37,7 @@ class App:
         self.idle_input = Input()
         self.running = True
         self.data, self.has_save = save.load()
-        self.audio = audio.Audio(muted=self.data['muted'])
+        self.audio = audio.Audio(self.data['music_vol'], self.data['sfx_vol'])
         self.level = 1
         self.joy = []
         self.axis_state = {}
@@ -60,10 +60,14 @@ class App:
         self.data['deaths'][key] = self.data['deaths'].get(key, 0) + 1
         self.save_now()
 
-    def toggle_mute(self):
-        self.audio.set_muted(not self.audio.muted)
-        self.data['muted'] = self.audio.muted
+    def change_volume(self, which, step):
+        """which = 'music_vol' or 'sfx_vol'; volumes go 0..10 and are saved straight away."""
+        d = self.data
+        d[which] = max(0, min(10, d[which] + step))
+        self.audio.set_volumes(d['music_vol'], d['sfx_vol'])
         self.save_now()
+        if which == 'sfx_vol':
+            self.audio.sfx('explode_s')
 
     # ------------------------------------------------------------ scenes
     def goto_title(self):
@@ -76,9 +80,9 @@ class App:
 
     def new_game(self):
         import save
-        muted = self.data['muted']
+        vols = self.data['music_vol'], self.data['sfx_vol']
         self.data = save.default_save()
-        self.data['muted'] = muted
+        self.data['music_vol'], self.data['sfx_vol'] = vols
         self.data['started'] = True
         self.has_save = True
         self.save_now()
@@ -244,11 +248,18 @@ class App:
 
 
 def create_window():
-    flags = pygame.SCALED
+    # Fullscreen by default (F11 switches to a window). Tests and the headless
+    # build check use the dummy video driver, so they stay windowed.
+    windowed = os.environ.get('SDL_VIDEODRIVER') == 'dummy' or os.environ.get('VV_WINDOWED')
+    flags = pygame.SCALED if windowed else (pygame.SCALED | pygame.FULLSCREEN)
     try:
         screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), flags, vsync=1)
     except pygame.error:
-        screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), flags)
+        try:
+            screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), flags)
+        except pygame.error:
+            # some drivers refuse fullscreen; a window beats a crash
+            screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), pygame.SCALED)
     pygame.display.set_caption(TITLE)
     try:
         import art

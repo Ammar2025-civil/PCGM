@@ -19,8 +19,8 @@ from config import (PF_W, PF_H, PF_X, WHITE, COMBO_TIERS, COMBO_WINDOW,
 from effects import Effects
 from player import Player
 
-EXPLOSION_SIZE = {'dart': 's', 'mini': 's', 'larva': 's', 'heavy': 'l', 'minelayer': 'l', 'nest': 'l',
-                  'golden': 'l', 'carrier': 'm'}
+EXPLOSION_SIZE = {'mini': 's', 'larva': 's', 'heavy': 'l', 'minelayer': 'l', 'nest': 'l', 'golden': 'l',
+                  'carrier': 'l', 'splitter': 'l', 'shielded': 'l'}
 
 
 class GameScene:
@@ -378,23 +378,36 @@ class GameScene:
             self.step(inp)
             inp = self.app.idle_input
 
+    def pause_options(self):
+        d = self.app.data
+        return ['RESUME', 'MUSIC VOLUME %d%%' % (d['music_vol'] * 10), 'EFFECTS VOLUME %d%%' % (d['sfx_vol'] * 10),
+                'RETRY LEVEL', 'QUIT TO HANGAR']
+
     def update_pause(self, inp):
-        opts = 3
+        opts = 5
         if inp.up:
             self.menu_sel = (self.menu_sel - 1) % opts
             self.sfx('menu_move')
         if inp.down:
             self.menu_sel = (self.menu_sel + 1) % opts
             self.sfx('menu_move')
+        if self.menu_sel in (1, 2) and (inp.left or inp.right):
+            self.app.change_volume('music_vol' if self.menu_sel == 1 else 'sfx_vol', -1 if inp.left else 1)
+            return
         if inp.confirm:
-            self.sfx('menu_select')
             if self.menu_sel == 0:
+                self.sfx('menu_select')
                 self.paused = False
                 self.app.audio.pause_music(False)
-            elif self.menu_sel == 1:
+            elif self.menu_sel in (1, 2):
+                key = 'music_vol' if self.menu_sel == 1 else 'sfx_vol'
+                self.app.change_volume(key, 1 if self.app.data[key] < 10 else -10)
+            elif self.menu_sel == 3:
+                self.sfx('menu_select')
                 self.app.audio.pause_music(False)
                 self.app.retry_level()
             else:
+                self.sfx('menu_select')
                 self.app.audio.pause_music(False)
                 self.app.goto_hangar()
         if inp.back:
@@ -455,7 +468,7 @@ class GameScene:
             self.collide_player_bullets()
         for pk in self.pickups:
             pk.update(self)
-            if p.alive and abs(pk.x - p.x) < 11 and abs(pk.y - p.y) < 11:
+            if p.alive and abs(pk.x - p.x) < 16 and abs(pk.y - p.y) < 16:
                 pk.alive = False
                 self.collect_pickup(pk)
         self.pickups = [pk for pk in self.pickups if pk.alive]
@@ -765,7 +778,7 @@ class GameScene:
         screen.blit(out, (PF_X + ox, oy))
         hud.draw_panels(screen, self)
         if self.paused:
-            hud.draw_menu_overlay(screen, 'PAUSED', ['RESUME', 'RETRY LEVEL', 'QUIT TO HANGAR'], self.menu_sel,
+            hud.draw_menu_overlay(screen, 'PAUSED', self.pause_options(), self.menu_sel,
                                   'RUN CREDITS ARE LOST IF YOU QUIT OR RETRY')
         elif self.state == 'over':
             hud.draw_menu_overlay(screen, 'SHIP DESTROYED', ['RETRY', 'HANGAR'], self.menu_sel,

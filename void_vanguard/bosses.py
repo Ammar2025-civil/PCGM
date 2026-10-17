@@ -107,7 +107,11 @@ class Boss:
         self.blink_t = 0
         self.mirror_pending = 0
         self.mirror_t = 0
+        # bosses are drawn bigger than before so they still tower over the 2x enemies
+        self.S = getattr(type(self), 'scale', None) or {'frigate': 1.35, 'miniboss': 1.6, 'boss': 1.3}[self.kind]
         self.build()
+        if self.body is not None:
+            self.home_y = max(self.home_y, self.body.get_height() / 2 + 24)
 
     # ------------------------------------------------------------ to override
     def build(self):
@@ -127,8 +131,11 @@ class Boss:
         pass
 
     # ------------------------------------------------------------ framework
-    def add_part(self, *a, **kw):
-        p = Part(self, *a, **kw)
+    def add_part(self, ox, oy, w, h, *a, raw=False, **kw):
+        """Offsets and hitbox are given at the original design size and scaled with the boss
+        (raw=True means they are already in final pixels)."""
+        k = 1.0 if raw else self.S
+        p = Part(self, ox * k, oy * k, w * k, h * k, *a, **kw)
         self.parts.append(p)
         return p
 
@@ -149,7 +156,7 @@ class Boss:
             return src.x, src.y + src.h * 0.3
         if src is None:
             return self.x, self.y + (self.body.get_height() * 0.3 if self.body else 10)
-        return self.x + src[0], self.y + src[1]
+        return self.x + src[0] * self.S, self.y + src[1] * self.S
 
     def update(self):
         g = self.game
@@ -598,8 +605,8 @@ class Boss:
 
 
 # ====================================================================== sprites
-def turret_sprite(sector, big=False):
-    key = ('turret', sector, big)
+def turret_sprite(sector, big=False, upscale=False):
+    key = ('turret', sector, big, upscale)
     s = _cache.get(key)
     if s is None:
         pal = art.sector_pal(sector)
@@ -607,18 +614,18 @@ def turret_sprite(sector, big=False):
             rows = ["...MM", "..#MM", ".##CC", "##CCC", "###CC", ".####", "..###"]
         else:
             rows = ["..M", ".#M", "##C", "##C", ".##"]
-        s = art.flip_v(art.sprite(rows, pal))
+        s = art.sprite(rows[::-1], pal, upscale=upscale)
         _cache[key] = s
     return s
 
 
-def frigate_sprite(sector, variant):
-    key = ('frigate', sector, variant)
+def frigate_sprite(sector, variant, scale=1.0):
+    key = ('frigate', sector, variant, scale)
     s = _cache.get(key)
     if s is not None:
         return s
     w, h = 66, 42
-    c = art.Canvas(w, h, mirror=True)
+    c = art.Canvas(w, h, mirror=True, scale=scale)
     if variant == 0:      # cruiser
         c.poly([(33, 0), (40, 12), (40, 38), (26, 38), (26, 12)], '#')
         c.poly([(26, 16), (4, 26), (4, 32), (26, 32)], '#')
@@ -644,7 +651,8 @@ def frigate_sprite(sector, variant):
         c.rect(26, 28, 4, 10, 'M')
         c.line(10, 28, 24, 20, '1')
     pal = art.sector_pal(sector)
-    s = art.flip_v(c.surface(pal))
+    c.g.reverse()            # face down; flip before shading so light stays on top
+    s = c.surface(pal)
     _cache[key] = s
     return s
 
@@ -658,13 +666,14 @@ class Frigate(Boss):
     def build(self):
         v = self.level % 3
         self.variant = v
-        self.body = frigate_sprite(self.sector, v)
+        self.body = frigate_sprite(self.sector, v, self.S)
         bw, bh = self.body.get_size()
         self.name = ('CRUISER', 'BATTLE BARGE', 'DESTROYER')[v]
-        self.core = self.add_part(0, 0, bw * 0.5, bh * 0.6, None, None, core=True)
-        tp = turret_sprite(self.sector)
-        self.turrets = [self.add_part(-bw * 0.3, bh * 0.05, 9, 9, tp, self.max_hp * 0.12),
-                        self.add_part(bw * 0.3, bh * 0.05, 9, 9, tp, self.max_hp * 0.12)]
+        self.core = self.add_part(0, 0, bw * 0.5, bh * 0.6, None, None, core=True, raw=True)
+        tp = turret_sprite(self.sector, upscale=True)
+        tw = tp.get_width() * 0.8
+        self.turrets = [self.add_part(-bw * 0.3, bh * 0.05, tw, tw, tp, self.max_hp * 0.12, raw=True),
+                        self.add_part(bw * 0.3, bh * 0.05, tw, tw, tp, self.max_hp * 0.12, raw=True)]
         attacks = ['bursts', 'fan', 'ring', 'spiral', 'laser', 'minions', 'mines', 'missiles', 'wall', 'rain']
         rnd = self.rnd
         self.p1_attacks = rnd.sample(attacks[:6], 3)
@@ -717,20 +726,22 @@ def boss_pal(body, acc, glass=(120, 240, 255), metal=(140, 146, 170)):
     return art.make_pal(body, acc, glass=glass, metal=metal)
 
 
-def build_sprite(key, w, h, pal, fn):
+def build_sprite(key, w, h, pal, fn, scale=1.0):
+    key = (key, scale)
     s = _cache.get(key)
     if s is None:
-        c = art.Canvas(w, h, mirror=True)
+        c = art.Canvas(w, h, mirror=True, scale=scale)
         fn(c)
         s = c.surface(pal)
         _cache[key] = s
     return s
 
 
-def pod_sprite(key, pal, rows):
+def pod_sprite(key, pal, rows, upscale=False):
+    key = (key, upscale)
     s = _cache.get(key)
     if s is None:
-        s = art.sprite(rows, pal)
+        s = art.sprite(rows, pal, upscale=upscale)
         _cache[key] = s
     return s
 
@@ -761,8 +772,8 @@ class Sentinel(Boss):
             c.ellipse(32, 21, 6, 6, 'C')
             c.line(16, 12, 26, 18, '1')
             c.put(10, 4, 'R')
-        self.body = build_sprite('sentinel', 64, 42, pal, f)
-        pod = pod_sprite('sentinel_pod', pal, POD_ROWS)
+        self.body = build_sprite('sentinel', 64, 42, pal, f, self.S)
+        pod = pod_sprite('sentinel_pod', pal, POD_ROWS, self.S >= 1.5)
         self.guns = [self.add_part(-20, 10, 10, 12, pod, self.max_hp * 0.14),
                      self.add_part(20, 10, 10, 12, pod, self.max_hp * 0.14)]
         self.core = self.add_part(0, 0, 30, 24, None, None, core=True)
@@ -807,7 +818,7 @@ class Crusher(Boss):
             c.poly([(4, 28), (12, 28), (6, 38)], 'M')
             c.ellipse(30, 12, 6, 5, 'C')
             c.rect(16, 6, 4, 4, 'Y')
-        self.body = build_sprite('crusher', 60, 52, pal, f)
+        self.body = build_sprite('crusher', 60, 52, pal, f, self.S)
         self.core = self.add_part(0, 0, 44, 30, None, None, core=True)
 
     def phase_script(self, i):
@@ -847,7 +858,7 @@ class Wisp(Boss):
             for x in (8, 15, 22):
                 c.line(x, 22, x - 2, 40, 'A')
                 c.line(x + 1, 22, x + 1, 36, '#')
-        self.body = build_sprite('wisp', 56, 44, pal, f)
+        self.body = build_sprite('wisp', 56, 44, pal, f, self.S)
         self.core = self.add_part(0, -4, 44, 26, None, None, core=True)
 
     def move(self):
@@ -890,7 +901,7 @@ class Glacier(Boss):
                 c.poly([(x, 8), (x + 4, 0), (x + 8, 8)], 'A')
             c.ellipse(32, 22, 8, 7, 'C')
             c.rect(28, 32, 8, 10, 'M')
-        self.body = build_sprite('glacier', 64, 44, pal, f)
+        self.body = build_sprite('glacier', 64, 44, pal, f, self.S)
         self.core = self.add_part(0, 0, 46, 30, None, None, core=True)
 
     def phase_script(self, i):
@@ -934,7 +945,7 @@ class Moth(Boss):
             c.ellipse(34, 22, 6, 18, '#')
             c.ellipse(34, 10, 4, 3, 'C')
             c.line(30, 2, 26, -2, 'M')
-        self.body = build_sprite('moth', 68, 44, pal, f)
+        self.body = build_sprite('moth', 68, 44, pal, f, self.S)
         self.core = self.add_part(0, 0, 20, 34, None, None, core=True)
         self.wings = [(-22, 0), (22, 0)]
 
@@ -978,8 +989,8 @@ class SecDrone(Boss):
             c.rect(12, 6, 40, 3, 'A')
             for x in (14, 20):
                 c.put(x, 34, 'Y')
-        self.body = build_sprite('secdrone', 64, 42, pal, f)
-        pod = pod_sprite('sec_pod', pal, POD_ROWS)
+        self.body = build_sprite('secdrone', 64, 42, pal, f, self.S)
+        pod = pod_sprite('sec_pod', pal, POD_ROWS, self.S >= 1.5)
         self.pods = [self.add_part(dx, dy, 10, 12, pod, self.max_hp * 0.1) for dx, dy in ((-30, -10), (30, -10), (-30, 14), (30, 14))]
         self.core = self.add_part(0, 0, 36, 28, None, None, core=True)
 
@@ -1016,13 +1027,13 @@ class Graviton(Boss):
             c.ellipse(24, 24, 18, 18, '#')
             c.ellipse(24, 24, 10, 10, 'K')
             c.ellipse(24, 24, 6, 6, 'C')
-        self.body = build_sprite('graviton', 48, 48, pal, f)
+        self.body = build_sprite('graviton', 48, 48, pal, f, self.S)
         self.core = self.add_part(0, 0, 32, 32, None, None, core=True)
 
     def draw_extra(self, surf):
         for k in range(3):
             a = self.t * 0.04 + k * 2.1
-            r = pygame.Rect(0, 0, 70, 22)
+            r = pygame.Rect(0, 0, int(70 * self.S), int(22 * self.S))
             r.center = (int(self.x), int(self.y))
             pygame.draw.arc(surf, (240, 120, 255), r, a, a + 1.6, 2)
 
@@ -1063,8 +1074,8 @@ class Brood(Boss):
             c.ellipse(32, 10, 6, 4, 'C')
             for k in range(3):
                 c.line(20, 14 + k * 6, 6, 8 + k * 10, '1')
-        self.body = build_sprite('brood', 64, 46, pal, f)
-        sac = pod_sprite('brood_sac', pal, SAC_ROWS)
+        self.body = build_sprite('brood', 64, 46, pal, f, self.S)
+        sac = pod_sprite('brood_sac', pal, SAC_ROWS, self.S >= 1.5)
         self.sacs = [self.add_part(-22, 10, 10, 12, sac, self.max_hp * 0.12),
                      self.add_part(22, 10, 10, 12, sac, self.max_hp * 0.12)]
         self.core = self.add_part(0, 0, 26, 34, None, None, core=True)
@@ -1103,7 +1114,7 @@ class Stalker(Boss):
             c.poly([(28, 44), (16, 18), (2, 4), (20, 8), (28, 0)], '#')
             c.poly([(28, 36), (22, 16), (28, 10)], 'A')
             c.ellipse(28, 14, 3, 5, 'C')
-        self.body = build_sprite('stalker', 56, 46, pal, f)
+        self.body = build_sprite('stalker', 56, 46, pal, f, self.S)
         self.core = self.add_part(0, 0, 30, 34, None, None, core=True)
 
     def phase_script(self, i):
@@ -1140,8 +1151,8 @@ class Guardian(Boss):
             c.ellipse(34, 22, 10, 10, 'K')
             c.ellipse(34, 22, 7, 7, 'C')
             c.rect(30, 36, 8, 8, 'M')
-        self.body = build_sprite('guardian', 68, 46, pal, f)
-        pod = pod_sprite('guard_pod', pal, POD_ROWS)
+        self.body = build_sprite('guardian', 68, 46, pal, f, self.S)
+        pod = pod_sprite('guard_pod', pal, POD_ROWS, self.S >= 1.5)
         self.pods = [self.add_part(-24, 8, 10, 12, pod, self.max_hp * 0.1),
                      self.add_part(24, 8, 10, 12, pod, self.max_hp * 0.1)]
         self.core = self.add_part(0, 0, 34, 30, None, None, core=True)
@@ -1191,8 +1202,8 @@ class Aegis(Boss):
                 ang = a * math.pi / 2 + math.pi / 4
                 c.line(60 + math.cos(ang) * 22, 34 + math.sin(ang) * 20, 60 + math.cos(ang) * 31, 34 + math.sin(ang) * 31, 'A')
             c.put(60, 0, 'R')
-        self.body = build_sprite('aegis', 120, 72, pal, f)
-        pod = pod_sprite('aegis_pod', pal, POD_ROWS)
+        self.body = build_sprite('aegis', 120, 72, pal, f, self.S)
+        pod = pod_sprite('aegis_pod', pal, POD_ROWS, self.S >= 1.5)
         self.turrets = [self.add_part(dx, dy, 10, 12, pod, self.max_hp * 0.09)
                         for dx, dy in ((-34, -6), (34, -6), (-22, 26), (22, 26))]
         self.core = self.add_part(0, 0, 40, 36, None, None, core=True)
@@ -1252,8 +1263,8 @@ class Grinder(Boss):
             c.line(30, 40, 52, 56, '1')
             c.put(36, 8, 'Y')
             c.put(36, 10, 'Y')
-        self.body = build_sprite('grinder', 116, 72, pal, f)
-        drill = pod_sprite('grinder_drill', pal, ["MMMM", "M77M", "MMMM", ".M7M", ".MM.", "..M.", "..M."])
+        self.body = build_sprite('grinder', 116, 72, pal, f, self.S)
+        drill = pod_sprite('grinder_drill', pal, ["MMMM", "M77M", "MMMM", ".M7M", ".MM.", "..M.", "..M."], self.S >= 1.5)
         self.arms = [self.add_part(-42, 18, 12, 14, drill, self.max_hp * 0.1),
                      self.add_part(42, 18, 12, 14, drill, self.max_hp * 0.1)]
         self.core = self.add_part(0, 0, 50, 46, None, None, core=True)
@@ -1300,12 +1311,12 @@ class Leviathan(Boss):
             c.poly([(16, 32), (8, 20), (24, 20)], 'A')
             c.ellipse(9, 12, 3, 3, 'C')
             c.line(4, 2, 1, -4, 'A')
-        self.body = build_sprite('lev_head', 32, 32, pal, head)
+        self.body = build_sprite('lev_head', 32, 32, pal, head, self.S)
 
         def seg(c):
             c.ellipse(10, 9, 9, 8, '#')
             c.ellipse(10, 7, 4, 3, 'A')
-        sseg = build_sprite('lev_seg', 20, 18, pal, seg)
+        sseg = build_sprite('lev_seg', 20, 18, pal, seg, self.S)
         self.segs = [self.add_part(0, -i * 12, 14, 12, sseg, None) for i in range(1, self.SEGS + 1)]
         self.core = self.add_part(0, 0, 26, 26, None, None, core=True)
         self.trail = []
@@ -1316,9 +1327,9 @@ class Leviathan(Boss):
         super().update()
         if self.fighting or self.y > -40:
             self.trail.insert(0, (self.x, self.y))
-            del self.trail[200:]
+            del self.trail[400:]
             for k, sp in enumerate(self.segs):
-                idx = min(len(self.trail) - 1, (k + 1) * 6)
+                idx = min(len(self.trail) - 1, int((k + 1) * 6 * self.S))
                 if idx >= 0:
                     tx, ty = self.trail[idx]
                     sp.ox, sp.oy = tx - self.x, ty - self.y
@@ -1336,9 +1347,11 @@ class Leviathan(Boss):
     def touches(self, px, py):
         if not self.fighting or self.dying:
             return False
-        if abs(px - self.x) < 10 and abs(py - self.y) < 10:
+        r = 10 * self.S
+        if abs(px - self.x) < r and abs(py - self.y) < r:
             return True
-        return any(abs(px - sg.x) < 6 and abs(py - sg.y) < 6 for sg in self.segs)
+        r = 6 * self.S
+        return any(abs(px - sg.x) < r and abs(py - sg.y) < r for sg in self.segs)
 
     def draw(self, surf):
         if not self.alive:
@@ -1398,7 +1411,7 @@ class Cryo(Boss):
             c.ellipse(54, 36, 12, 12, 'K')
             c.ellipse(54, 36, 8, 8, 'C')
             c.rect(46, 56, 16, 6, 'M')
-        self.body = build_sprite('cryo', 108, 72, pal, f)
+        self.body = build_sprite('cryo', 108, 72, pal, f, self.S)
         self.core = self.add_part(0, 0, 48, 44, None, None, core=True)
 
     def phase_script(self, i):
@@ -1447,7 +1460,7 @@ class Seraph(Boss):
             for k, (y, ln) in enumerate(((14, 52), (28, 46), (42, 36))):
                 c.poly([(46, y), (46 - ln, y - 8 + k * 2), (46 - ln + 6, y + 6), (46, y + 8)], 'A' if k % 2 == 0 else '#')
             c.ring(56, 14, 11, 12, 'Y')
-        self.body = build_sprite('seraph', 112, 70, pal, f)
+        self.body = build_sprite('seraph', 112, 70, pal, f, self.S)
         self.core = self.add_part(0, 0, 30, 50, None, None, core=True)
         self.wings = [(-40, -10), (40, -10), (-34, 10), (34, 10)]
 
@@ -1499,8 +1512,8 @@ class Warden(Boss):
             c.rect(28, 4, 52, 4, 'A')
             c.rect(6, 20, 22, 10, 'M')
             c.rect(44, 50, 20, 10, 'M')
-        self.body = build_sprite('warden', 108, 62, pal, f)
-        arm = pod_sprite('warden_arm', pal, ["MMMM.", "M##MM", "M#CCM", "M#CCM", "MMMMM", ".M.M.", ".M.M."])
+        self.body = build_sprite('warden', 108, 62, pal, f, self.S)
+        arm = pod_sprite('warden_arm', pal, ["MMMM.", "M##MM", "M#CCM", "M#CCM", "MMMMM", ".M.M.", ".M.M."], self.S >= 1.5)
         self.arms = [self.add_part(-46, 8, 12, 14, arm, self.max_hp * 0.1),
                      self.add_part(46, 8, 12, 14, arm, self.max_hp * 0.1)]
         self.core = self.add_part(0, 0, 50, 44, None, None, core=True)
@@ -1561,13 +1574,13 @@ class Horizon(Boss):
             c.ellipse(48, 34, 24, 24, '#')
             c.ellipse(48, 34, 17, 17, 'K')
             c.ring(48, 34, 17, 19, 'Y')
-        self.body = build_sprite('horizon', 96, 68, pal, f)
+        self.body = build_sprite('horizon', 96, 68, pal, f, self.S)
         self.core = self.add_part(0, 0, 44, 44, None, None, core=True)
 
     def draw_extra(self, surf):
         for k in range(4):
             a = -self.t * 0.03 + k * 1.57
-            r = pygame.Rect(0, 0, 120, 36)
+            r = pygame.Rect(0, 0, int(120 * self.S), int(36 * self.S))
             r.center = (int(self.x), int(self.y))
             pygame.draw.arc(surf, (255, 170, 80), r, a, a + 0.8, 2)
 
@@ -1619,8 +1632,8 @@ class Queen(Boss):
                 c.line(40, 18 + k * 6, 6 + k * 4, 6 + k * 14, '1')
                 c.line(6 + k * 4, 6 + k * 14, 4 + k * 4, 14 + k * 14, '1')
             c.poly([(48, 0), (42, -6), (46, 4)], 'A')
-        self.body = build_sprite('queen', 112, 68, pal, f)
-        sac = pod_sprite('queen_sac', pal, SAC_ROWS)
+        self.body = build_sprite('queen', 112, 68, pal, f, self.S)
+        sac = pod_sprite('queen_sac', pal, SAC_ROWS, self.S >= 1.5)
         self.sacs = [self.add_part(-26, 14, 10, 12, sac, self.max_hp * 0.09),
                      self.add_part(26, 14, 10, 12, sac, self.max_hp * 0.09)]
         self.core = self.add_part(0, 0, 40, 52, None, None, core=True)
@@ -1672,7 +1685,7 @@ class Phantom(Boss):
             c.poly([(50, 56), (40, 34), (50, 22)], 'A')
             c.ellipse(50, 22, 5, 7, 'C')
             c.line(10, 30, 30, 36, 'A')
-        self.body = build_sprite('phantom', 100, 68, pal, f)
+        self.body = build_sprite('phantom', 100, 68, pal, f, self.S)
         self.core = self.add_part(0, 0, 44, 46, None, None, core=True)
 
     def draw_extra(self, surf):
@@ -1713,6 +1726,7 @@ class Phantom(Boss):
 class MothershipCore(Boss):
     name = 'MOTHERSHIP CORE'
     kind = 'boss'
+    scale = 1.15
     phases = (1.0, 0.75, 0.5, 0.25)
     hp_scale = 1.35
     home_y = 84
@@ -1732,8 +1746,8 @@ class MothershipCore(Boss):
             c.rect(62, 74, 16, 14, 'M')
             c.put(20, 14, 'R')
             c.put(50, 8, 'R')
-        self.body = build_sprite('mothership', 140, 94, pal, f)
-        pod = pod_sprite('ms_pod', pal, POD_ROWS)
+        self.body = build_sprite('mothership', 140, 94, pal, f, self.S)
+        pod = pod_sprite('ms_pod', pal, POD_ROWS, self.S >= 1.5)
         self.turrets = [self.add_part(dx, dy, 10, 12, pod, self.max_hp * 0.06)
                         for dx, dy in ((-50, -16), (50, -16), (-46, 14), (46, 14))]
         self.core = self.add_part(0, 0, 50, 50, None, None, core=True)

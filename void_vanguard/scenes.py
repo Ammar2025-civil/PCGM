@@ -106,7 +106,9 @@ class TitleScene:
         self.app.audio.set_intensity(2)
 
     def options(self):
-        return ['PLAY', 'CONTINUE', 'MUTE: ' + ('ON' if self.app.audio.muted else 'OFF')]
+        d = self.app.data
+        return ['PLAY', 'CONTINUE', 'MUSIC VOLUME %d%%' % (d['music_vol'] * 10),
+                'EFFECTS VOLUME %d%%' % (d['sfx_vol'] * 10)]
 
     def update(self):
         inp = self.app.input
@@ -118,7 +120,7 @@ class TitleScene:
             self.shots.append([self.ship_x + 3, 300])
         for s in self.shots:
             s[1] -= 8
-        self.shots = [s for s in self.shots if s[1] > 150]
+        self.shots = [s for s in self.shots if s[1] > 262]
         if self.confirm is not None:
             r = self.confirm.update(inp)
             if r == 'move':
@@ -136,16 +138,19 @@ class TitleScene:
                 self.confirm = None
             return
         if inp.up:
-            self.sel = (self.sel - 1) % 3
+            self.sel = (self.sel - 1) % 4
             self.app.audio.sfx('menu_move')
         if inp.down:
-            self.sel = (self.sel + 1) % 3
+            self.sel = (self.sel + 1) % 4
             self.app.audio.sfx('menu_move')
+        if self.sel >= 2 and (inp.left or inp.right):
+            self.app.change_volume('music_vol' if self.sel == 2 else 'sfx_vol', -1 if inp.left else 1)
+            return
         if inp.back:
             self.confirm = Confirm('QUIT THE GAME?', None, 'QUIT', 'STAY')
             self.confirm.kind = 'quit'
             return
-        if inp.confirm or (self.sel == 2 and (inp.left or inp.right)):
+        if inp.confirm:
             if self.sel == 0:
                 self.app.audio.sfx('menu_select')
                 if self.app.has_save:
@@ -160,8 +165,9 @@ class TitleScene:
                 else:
                     self.app.audio.sfx('error')
             else:
-                self.app.toggle_mute()
-                self.app.audio.sfx('menu_select')
+                # Enter on a volume row steps it up and wraps round to 0
+                key = 'music_vol' if self.sel == 2 else 'sfx_vol'
+                self.app.change_volume(key, 1 if self.app.data[key] < 10 else -10)
 
     def draw(self, screen):
         self.bg.draw(screen, 190)
@@ -169,10 +175,10 @@ class TitleScene:
         for x, y in self.shots:
             screen.fill((255, 230, 140), (int(x) - 1, int(y), 2, 6))
         ship = art.hull_sprite('falcon')
-        ship2 = pygame.transform.scale(ship, (ship.get_width() * 2, ship.get_height() * 2))
+        ship2 = ship      # hull sprites are already drawn at 2x detail
         sx, sy = int(self.ship_x), 304
-        draw_flame(screen, sx - 5, sy + ship2.get_height() // 2 - 2, 1, self.t)
-        draw_flame(screen, sx + 5, sy + ship2.get_height() // 2 - 2, 1, self.t)
+        draw_flame(screen, sx - 5, sy + ship2.get_height() // 2 - 3, 2, self.t)
+        draw_flame(screen, sx + 5, sy + ship2.get_height() // 2 - 3, 2, self.t)
         screen.blit(ship2, (sx - ship2.get_width() // 2, sy - ship2.get_height() // 2))
         opts = self.options()
         for i, o in enumerate(opts):
@@ -191,7 +197,9 @@ class TitleScene:
             d = self.app.data
             art.text(screen, 'SAVED: LEVEL %s   %d STARS   %s CREDITS' % (
                 levels.level_name(d['level_unlocked']), shop.total_stars(d), fmt(d['credits'])),
-                SCREEN_W // 2, 246, (150, 150, 190), 1, 'c')
+                SCREEN_W // 2, 272, (150, 150, 190), 1, 'c')
+        if self.sel >= 2 and (self.t // 20) % 3:
+            art.text(screen, 'LEFT / RIGHT CHANGES THE VOLUME', SCREEN_W // 2, 286, (255, 220, 120), 1, 'c')
         art.text(screen, 'ARROWS/WASD MOVE   AUTO FIRE   SPACE BOMB   P/ESC PAUSE   F11 FULLSCREEN',
                  SCREEN_W // 2, 344, (120, 120, 160), 1, 'c')
         art.text(screen, 'V' + VERSION, 6, 6, (70, 70, 100))
@@ -352,7 +360,7 @@ class HangarScene:
         pygame.draw.ellipse(screen, (60, 90, 180), (bx + 48, by + 112, 100, 18), 1)
         paint = 'gold' if 'gold' in shop.owned_star_unlocks(d) else None
         hs = art.hull_sprite(h['id'], paint)
-        sc = 4
+        sc = 2
         big = pygame.transform.scale(hs, (hs.get_width() * sc, hs.get_height() * sc))
         if not unlocked:
             big = art.silhouette(big, (40, 40, 70))
@@ -361,7 +369,7 @@ class HangarScene:
         if unlocked:
             geo = art.hull_geometry(h['id'])
             for ex, ey in geo['engines']:
-                draw_flame(screen, int(cx + ex * sc), int(cy + ey * sc), 2, self.t)
+                draw_flame(screen, int(cx + ex * sc), int(cy + ey * sc), 3, self.t)
         screen.blit(big, (cx - big.get_width() // 2, cy - big.get_height() // 2))
         if not unlocked:
             screen.blit(art.icon('lock', (200, 200, 220)), (cx - 3, cy - 3))
@@ -568,23 +576,24 @@ class ResultsScene:
             art.text(screen, 'HULL BONUS ×%.2f' % r['credit_mult'], SCREEN_W // 2, y + 18, (160, 220, 160), 1, 'c')
         art.text(screen, '+' + fmt(self.shown_credits), SCREEN_W // 2, y + 28, GOLD, 2, 'c')
         # unlocks
-        y = 234
+        y = 232
         for kind, payload in self.unlocks:
             if self.t < 240:
                 break
-            pygame.draw.rect(screen, (30, 20, 50), (120, y, 400, 30))
-            pygame.draw.rect(screen, (255, 200, 90) if (self.t // 10) % 2 else (200, 120, 255), (120, y, 400, 30), 1)
+            bh = 56 if kind == 'hull' else 30
+            pygame.draw.rect(screen, (30, 20, 50), (120, y, 400, bh))
+            pygame.draw.rect(screen, (255, 200, 90) if (self.t // 10) % 2 else (200, 120, 255), (120, y, 400, bh), 1)
             if kind == 'hull':
                 h = shop.HULL_BY_ID[payload]
                 hs = art.hull_sprite(payload)
-                screen.blit(pygame.transform.scale(hs, (hs.get_width() * 2, hs.get_height() * 2)), (130, y - 2))
-                art.text(screen, 'NEW HULL UNLOCKED: ' + h['name'], 180, y + 6, GOLD)
-                art.text(screen, h['desc'], 180, y + 17, (200, 220, 255))
+                screen.blit(hs, (156 - hs.get_width() // 2, y + bh // 2 - hs.get_height() // 2))
+                art.text(screen, 'NEW HULL UNLOCKED: ' + h['name'], 200, y + 18, GOLD)
+                art.text(screen, h['desc'], 200, y + 30, (200, 220, 255))
             else:
                 screen.blit(art.icon('star', GOLD), (132, y + 10))
                 art.text(screen, 'STAR REWARD UNLOCKED', 150, y + 6, GOLD)
                 art.text(screen, payload, 150, y + 17, (200, 255, 200))
-            y += 36
+            y += bh + 6
         if self.t > 90 and (self.t // 20) % 2 == 0:
             art.text(screen, 'PRESS ENTER', SCREEN_W // 2, 344, (255, 220, 120), 1, 'c')
 

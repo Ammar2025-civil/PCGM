@@ -72,12 +72,12 @@ python main.py
 | (automatic) | Fire |
 | Space | Bomb (clears bullets, hits everything) |
 | P or Esc | Pause |
-| F11 | Fullscreen on/off |
+| F11 | Switch between fullscreen and a window |
 | Enter / Space | Confirm in menus |
 
 A gamepad also works: stick or d-pad to move, A for bomb, Start to pause.
 
-The main menu has only **Play**, **Continue** and **Mute**.
+The game starts in **fullscreen**. The main menu has **Play**, **Continue**, **Music Volume** and **Effects Volume** (left/right changes a volume; both are also in the pause menu and are saved automatically).
 
 ---
 
@@ -173,7 +173,7 @@ Notes:
 
 - **"No module named pygame"**: run `python -m pip install pygame-ce` again, with the same `python` you use to run the game.
 - **Errors mentioning pygame after installing**: you probably have both pygame and pygame-ce installed. Run `python -m pip uninstall pygame pygame-ce`, then `python -m pip install pygame-ce`.
-- **No sound**: check that the game isn't muted (title screen) and that your audio device works. The game still runs without audio.
+- **No sound**: check Music Volume and Effects Volume on the title screen (or in the pause menu) and that your audio device works. The game still runs without audio.
 
 ---
 

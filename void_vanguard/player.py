@@ -15,17 +15,17 @@ MAGNET_FRAMES = 25 * 60
 
 # main cannon layouts: (x offset, angle degrees, kind, damage factor)
 SPREAD_LAYOUT = {
-    1: [(-3, 0, 'main', 1.0), (3, 0, 'main', 1.0)],
-    2: [(-3, 0, 'main', 1.0), (3, 0, 'main', 1.0), (-5, -9, 'spread', 0.7), (5, 9, 'spread', 0.7)],
-    3: [(-4, 0, 'main', 1.0), (0, 0, 'main', 1.0), (4, 0, 'main', 1.0),
-        (-5, -10, 'spread', 0.7), (5, 10, 'spread', 0.7)],
-    4: [(-4, 0, 'main', 1.0), (0, 0, 'main', 1.0), (4, 0, 'main', 1.0),
-        (-5, -8, 'spread', 0.75), (5, 8, 'spread', 0.75), (-6, -18, 'spread', 0.7), (6, 18, 'spread', 0.7)],
-    5: [(-5, 0, 'main_big', 1.2), (-2, 0, 'main_big', 1.2), (2, 0, 'main_big', 1.2), (5, 0, 'main_big', 1.2),
-        (-5, -8, 'spread', 0.75), (5, 8, 'spread', 0.75), (-6, -16, 'spread', 0.75), (6, 16, 'spread', 0.75),
-        (-7, -26, 'spread', 0.7), (7, 26, 'spread', 0.7)],
+    1: [(-5, 0, 'main', 1.0), (5, 0, 'main', 1.0)],
+    2: [(-5, 0, 'main', 1.0), (5, 0, 'main', 1.0), (-9, -9, 'spread', 0.7), (9, 9, 'spread', 0.7)],
+    3: [(-7, 0, 'main', 1.0), (0, 0, 'main', 1.0), (7, 0, 'main', 1.0),
+        (-9, -10, 'spread', 0.7), (9, 10, 'spread', 0.7)],
+    4: [(-7, 0, 'main', 1.0), (0, 0, 'main', 1.0), (7, 0, 'main', 1.0),
+        (-9, -8, 'spread', 0.75), (9, 8, 'spread', 0.75), (-11, -18, 'spread', 0.7), (11, 18, 'spread', 0.7)],
+    5: [(-9, 0, 'main_big', 1.2), (-3, 0, 'main_big', 1.2), (3, 0, 'main_big', 1.2), (9, 0, 'main_big', 1.2),
+        (-9, -8, 'spread', 0.75), (9, 8, 'spread', 0.75), (-11, -16, 'spread', 0.75), (11, 16, 'spread', 0.75),
+        (-13, -26, 'spread', 0.7), (13, 26, 'spread', 0.7)],
 }
-LASER_WIDTH = {1: 3, 2: 5, 3: 8}
+LASER_WIDTH = {1: 4, 2: 6, 3: 10}
 LASER_DPS = {1: 0.24, 2: 0.34, 3: 0.48}     # damage per frame per target
 
 
@@ -43,7 +43,7 @@ class Player:
         self.hull = stats['hull']
         self.paint = stats.get('paint')
         self.x = PF_W / 2
-        self.y = PF_H - 46
+        self.y = PF_H - 60
         self.max_hp = stats['hp']
         self.hp = self.max_hp
         self.shield = stats.get('shield', 0)
@@ -113,8 +113,8 @@ class Player:
         self.x += dx * self.speed + g.gravity_x * 14.0 * self.stats.get('gravity_resist', 1.0)
         self.y += dy * self.speed
         lo, hi = g.play_bounds()
-        self.x = max(lo + 7, min(hi - 7, self.x))
-        self.y = max(14, min(PF_H - 10, self.y))
+        self.x = max(lo + 12, min(hi - 12, self.x))
+        self.y = max(22, min(PF_H - 18, self.y))
         if self.invuln > 0:
             self.invuln -= 1
         if self.bomb_cd > 0:
@@ -142,8 +142,8 @@ class Player:
             d.angle += 0.05
             n = len(self.drones)
             a = d.angle + i * math.tau / n
-            d.x = self.x + math.cos(a) * 21
-            d.y = self.y + 2 + math.sin(a) * 15
+            d.x = self.x + math.cos(a) * 36
+            d.y = self.y + 4 + math.sin(a) * 26
         self.flicker = (self.flicker + 1) % 1000
         if self.bounty > 0 and self.flicker % 4 == 0:
             g.fx.particle(self.x + (self.flicker % 16) - 8, self.y + 6, 0, 1.2, 16, 2, (200, 110, 255), 'sq', 0.97)
@@ -172,11 +172,11 @@ class Player:
             for ox, ang, kind, f in SPREAD_LAYOUT[lo['spread']]:
                 a = math.radians(ang)
                 sp = 9.0 if kind != 'spread' else 8.0
-                b = PBullet(x + ox, ny + 2, math.sin(a) * sp, -math.cos(a) * sp, dmg * f,
-                            art.player_shot(kind), 3 if kind != 'main_big' else 5, 9)
+                b = PBullet(x + ox, ny + 4, math.sin(a) * sp, -math.cos(a) * sp, dmg * f,
+                            art.player_shot(kind), 4 if kind != 'main_big' else 6, 12)
                 add(b)
             g.sfx('shot')
-            g.fx.particle(x, ny, 0, -0.5, 3, 4, (255, 240, 170), 'sq', 1.0)
+            g.fx.particle(x, ny, 0, -0.5, 3, 7, (255, 240, 170), 'sq', 1.0)
         if lo['wing']:
             self.wing_t -= 1
             if self.wing_t <= 0:
@@ -185,10 +185,10 @@ class Player:
                 angles = {1: (0,), 2: (0, 5), 3: (0, 5, 11)}[lo['wing']]
                 pod_w = art.part_sprite('wing%d' % lo['wing'], self.hull).get_width()
                 for side in (-1, 1):
-                    px = x + side * (wx + pod_w / 2 - 2)
+                    px = x + side * (wx + pod_w / 2 - 4)
                     for a in angles:
                         r = math.radians(a * side)
-                        add(PBullet(px, y + wy - 5, math.sin(r) * 8, -math.cos(r) * 8, dmg * 0.8,
+                        add(PBullet(px, y + wy - 10, math.sin(r) * 8, -math.cos(r) * 8, dmg * 0.8,
                                     art.player_shot('wing'), 3, 7))
         if lo['missile']:
             self.missile_t -= 1
@@ -209,7 +209,7 @@ class Player:
             if self.rear_t <= 0:
                 self.rear_t = 10
                 angles = {1: (0,), 2: (-10, 10), 3: (-18, 0, 18)}[lo['rear']]
-                ty = y + geo['tail'][1] + 3
+                ty = y + geo['tail'][1] + 6
                 for a in angles:
                     r = math.radians(a)
                     add(PBullet(x, ty, math.sin(r) * 7, math.cos(r) * 7, dmg * 0.9,
@@ -223,7 +223,7 @@ class Player:
                     a = math.atan2(t.y - d.y, t.x - d.x)
                 else:
                     a = -math.pi / 2
-                add(PBullet(d.x, d.y - 3, math.cos(a) * 7, math.sin(a) * 7, dmg * 1.0,
+                add(PBullet(d.x, d.y - 6, math.cos(a) * 7, math.sin(a) * 7, dmg * 1.0,
                             art.player_shot('drone'), 3, 5))
         self.laser_on = lo['laser'] > 0
 
@@ -343,11 +343,12 @@ class Player:
         # engine flames
         boost = 3 if self.moving[1] < 0 else (-1 if self.moving[1] > 0 else 0)
         for ex, ey in geo['engines']:
-            n = 3 + boost + (self.flicker // 2) % 3
+            n = 6 + boost * 2 + (self.flicker // 2) % 4
             fx, fy = x + int(ex), y + int(ey)
-            surf.fill((255, 120, 40), (fx - 1, fy, 2, n + 2))
-            surf.fill((255, 230, 120), (fx - 1, fy, 2, n))
-            surf.fill(WHITE, (fx - 1 + (0 if ex < 0 else 1), fy, 1, max(1, n - 2)))
+            surf.fill((200, 60, 30), (fx - 2, fy, 4, n + 4))
+            surf.fill((255, 140, 40), (fx - 2, fy, 4, n + 1))
+            surf.fill((255, 230, 120), (fx - 1, fy, 3, n - 1))
+            surf.fill(WHITE, (fx - 1 + (0 if ex < 0 else 1), fy, 1, max(1, n - 4)))
         if self.invuln > 0 and self.invuln % 6 < 3 and self.shield == 0:
             return
         s = self.sprite()
@@ -363,7 +364,7 @@ class Player:
         surf.fill(WHITE, (x - 1, y - 1, 2, 3))
         if self.shield > 0:
             t = self.flicker
-            r = 15 + self.shield
+            r = 25 + self.shield * 2
             col = (110, 190, 255) if self.invuln % 6 < 3 else WHITE
             pygame.draw.circle(surf, (40, 80, 160), (x, y), r, 1)
             for i in range(self.shield + 1):
@@ -388,7 +389,7 @@ class Player:
 def compose_ship(hull, lo, magnet=False, paint=None):
     """Build the ship sprite with every attached part visible."""
     geo = art.hull_geometry(hull)
-    W, H = 76, 64
+    W, H = 150, 128
     cx, cy = W // 2, H // 2
     out = pygame.Surface((W, H), pygame.SRCALPHA)
     hs = art.hull_sprite(hull, paint)
@@ -407,28 +408,28 @@ def compose_ship(hull, lo, magnet=False, paint=None):
     if lo['missile']:
         ps = part('missile%d' % lo['missile'])
         ux = max(geo['under'][0], ps.get_width() / 2 + 2)
-        put(ps, -ux, wy - ps.get_height() / 2 - 1)
-        put(ps, ux, wy - ps.get_height() / 2 - 1, True)
+        put(ps, -ux, wy - ps.get_height() / 2 - 2)
+        put(ps, ux, wy - ps.get_height() / 2 - 2, True)
     if lo['wing']:
         ps = part('wing%d' % lo['wing'])
-        off = wx + ps.get_width() / 2 - 2
-        put(ps, -off, wy - 1)
-        put(ps, off, wy - 1, True)
+        off = wx + ps.get_width() / 2 - 4
+        put(ps, -off, wy - 2)
+        put(ps, off, wy - 2, True)
     if lo['rear']:
         ps = part('rear%d' % lo['rear'])
         tx, ty = geo['tail']
-        put(ps, 0, ty + ps.get_height() / 2 - 3)
+        put(ps, 0, ty + ps.get_height() / 2 - 6)
     out.blit(hs, (cx - hs.get_width() // 2, cy - hs.get_height() // 2))
     # on top: the nose cannon grows forward, the laser lens sits on the tip
     if lo['spread'] >= 2:
         ps = part('nose%d' % lo['spread'])
-        put(ps, 0, ny - ps.get_height() / 2 + 3)
+        put(ps, 0, ny - ps.get_height() / 2 + 8)
     if lo['laser']:
         ps = part('laser%d' % lo['laser'])
-        top = ny - (part('nose%d' % lo['spread']).get_height() - 3 if lo['spread'] >= 2 else 0)
-        put(ps, 0, top - ps.get_height() / 2 + 3)
+        top = ny - (part('nose%d' % lo['spread']).get_height() - 8 if lo['spread'] >= 2 else 0)
+        put(ps, 0, top - ps.get_height() / 2 + 6)
     if magnet:
         ps = part('magnet')
-        put(ps, -wx * 0.5, wy - 6)
-        put(ps, wx * 0.5, wy - 6, True)
+        put(ps, -wx * 0.5, wy - 12)
+        put(ps, wx * 0.5, wy - 12, True)
     return out

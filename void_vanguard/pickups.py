@@ -67,9 +67,9 @@ class Pickup:
         if self.part:
             s = art.pickup_sprite(self.kind, 1 if (self.t // 8) % 3 == 0 else 0)
             bob = int(math.sin(self.t * 0.12) * 1.5)
-            surf.blit(s, (int(self.x) - 7, int(self.y) - 7 + bob))
+            surf.blit(s, (int(self.x) - s.get_width() // 2, int(self.y) - s.get_height() // 2 + bob))
             if (self.t // 10) % 2 == 0:
-                r = 10 + (self.t % 20) // 4
+                r = 14 + (self.t % 20) // 4
                 pygame.draw.circle(surf, art.PICKUP_STYLE[self.kind][1], (int(self.x), int(self.y) + bob), r, 1)
         else:
             if not self.pulled and self.t > 480 and self.t % 6 < 3:

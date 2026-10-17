@@ -37,19 +37,28 @@ def scale(c, f):
     return (clamp8(c[0] * f), clamp8(c[1] * f), clamp8(c[2] * f))
 
 
-def shade3(base):
-    """Dark / mid / light ramp with hue-shifted shadows (cooler) and warm lights."""
+def shade5(base):
+    """Five-tone ramp: deep shadow, shadow, base, light, highlight.
+    Shadows shift toward blue/purple and lights toward warm white (16-bit style)."""
     r, g, b = base
-    dark = (clamp8(r * 0.5), clamp8(g * 0.46), clamp8(b * 0.6 + 22))
-    light = mix(base, (255, 250, 232), 0.42)
-    return (dark, tuple(base), light)
+    deep = (clamp8(r * 0.3), clamp8(g * 0.28), clamp8(b * 0.42 + 18))
+    dark = (clamp8(r * 0.56), clamp8(g * 0.52), clamp8(b * 0.66 + 14))
+    light = mix(base, (255, 248, 228), 0.34)
+    hi = mix(base, (255, 252, 240), 0.68)
+    return (deep, dark, tuple(base), light, hi)
+
+
+def shade3(base):
+    s5 = shade5(base)
+    return (s5[1], s5[2], s5[3])
 
 
 def make_pal(body, acc, glass=(80, 200, 255), glow=(255, 160, 50),
              glow2=(255, 244, 170), metal=(146, 152, 178), outline=(14, 12, 26)):
     return {
-        'body': shade3(body), 'acc': shade3(acc), 'metal': shade3(metal),
-        'glass': (mix(glass, (10, 16, 60), 0.45), mix(glass, (255, 255, 255), 0.4)),
+        'body': shade5(body), 'acc': shade5(acc), 'metal': shade5(metal),
+        'glass': (mix(glass, (8, 12, 50), 0.6), mix(glass, (10, 16, 60), 0.3), glass,
+                  mix(glass, (255, 255, 255), 0.5), (255, 255, 255)),
         'glow': glow, 'glow2': glow2, 'outline': outline,
     }
 
@@ -78,7 +87,49 @@ def grid_from(rows, mirror='odd'):
     return [r.ljust(w, '.') for r in rows]
 
 
-def render(grid, pal, outline=True):
+def scale2x(grid):
+    """Scale2x (EPX) on a grid of region characters: doubles the size and rounds
+    off diagonal staircases, so upscaled sprites look redrawn rather than blocky."""
+    h = len(grid)
+    w = len(grid[0]) if h else 0
+    out = []
+    for y in range(h):
+        r0 = []
+        r1 = []
+        row = grid[y]
+        up = grid[y - 1] if y > 0 else None
+        dn = grid[y + 1] if y < h - 1 else None
+        for x in range(w):
+            e = row[x]
+            b = up[x] if up else e
+            hh = dn[x] if dn else e
+            d = row[x - 1] if x > 0 else e
+            f = row[x + 1] if x < w - 1 else e
+            if b != hh and d != f:
+                e0 = d if d == b else e
+                e1 = f if b == f else e
+                e2 = d if d == hh else e
+                e3 = f if hh == f else e
+            else:
+                e0 = e1 = e2 = e3 = e
+            r0.append(e0 + e1)
+            r1.append(e2 + e3)
+        out.append(''.join(r0))
+        out.append(''.join(r1))
+    return out
+
+
+def render(grid, pal, outline=True, upscale=False, detail=None):
+    """Shade a region grid into a sprite.
+
+    Auto-shaded regions get a bevel lit from the top-left: highlight on the top
+    edge, light just below it, base colour inside, shadow and deep shadow along
+    the bottom/right. With detail on (default for upscaled sprites) large flat
+    areas also get panel seams and glass gets a specular glint."""
+    if upscale:
+        grid = scale2x(grid)
+    if detail is None:
+        detail = upscale
     h = len(grid)
     w = len(grid[0]) if h else 0
     pad = 1 if outline else 0
@@ -92,6 +143,13 @@ def render(grid, pal, outline=True):
             return _GROUP.get(c, c)
         return None
 
+    def dist(x, y, dx, dy, g, lim=3):
+        for k in range(1, lim + 1):
+            if grp(x + dx * k, y + dy * k) != g:
+                return k
+        return lim + 1
+
+    cx = (w - 1) / 2.0
     for y in range(h):
         row = grid[y]
         for x in range(w):
@@ -99,22 +157,59 @@ def render(grid, pal, outline=True):
             if c == '.':
                 continue
             if c == 'C':
-                col = pal['glass'][1] if grp(x, y - 1) != 'glass' else pal['glass'][0]
+                gl = pal['glass']
+                dt = dist(x, y, 0, -1, 'glass')
+                db = dist(x, y, 0, 1, 'glass')
+                if dt == 1 and dist(x, y, -1, 0, 'glass') <= 2 and detail:
+                    col = gl[4]
+                elif dt == 1:
+                    col = gl[3]
+                elif db == 1:
+                    col = gl[0]
+                elif dt == 2:
+                    col = gl[2]
+                else:
+                    col = gl[1]
             elif c in '#AM':
                 g = _GROUP[c]
                 sh = pal[g]
-                if grp(x, y + 1) != g:
-                    col = sh[0]
-                elif grp(x, y - 1) != g:
-                    col = sh[2]
+                db = dist(x, y, 0, 1, g)
+                dt = dist(x, y, 0, -1, g)
+                dl = dist(x, y, -1, 0, g)
+                dr = dist(x, y, 1, 0, g)
+                if db == 1:
+                    tone = 0
+                elif dt == 1:
+                    tone = 4 if (dl <= 2 or not detail) else 3
+                elif db == 2 or dr == 1:
+                    tone = 1
+                elif dt == 2 or dl == 1:
+                    tone = 3
                 else:
-                    col = sh[1]
+                    tone = 2
+                    if detail and dt == 3 and (x + y) % 2 == 0:
+                        tone = 3          # dithered band under the highlight
+                    if detail and g != 'metal' and dt >= 3 and db >= 3:
+                        # panel seams: a centre spine and a horizontal seam every 7 rows,
+                        # with rivets and vent slits on wide plating
+                        wide = dl >= 3 and dr >= 3
+                        if abs(x - cx) < 0.6 and h > 16:
+                            tone = 1
+                        elif y % 7 == 4 and wide:
+                            tone = 1
+                        elif y % 7 == 5 and wide:
+                            tone = 3
+                        elif y % 7 == 1 and wide and x % 4 == 1:
+                            tone = 4
+                        elif y % 7 == 2 and wide and x % 4 == 1:
+                            tone = 0
+                col = sh[tone]
             elif c in '123':
-                col = pal['body'][int(c) - 1]
+                col = pal['body'][int(c)]
             elif c in '456':
-                col = pal['acc'][int(c) - 4]
+                col = pal['acc'][int(c) - 3]
             elif c in '789':
-                col = pal['metal'][int(c) - 7]
+                col = pal['metal'][int(c) - 6]
             elif c == 'E':
                 col = pal['glow']
             elif c == 'e':
@@ -133,23 +228,38 @@ def render(grid, pal, outline=True):
     return surf
 
 
-def sprite(rows, pal, mirror='odd', outline=True):
-    return render(grid_from(rows, mirror), pal, outline)
+def sprite(rows, pal, mirror='odd', outline=True, upscale=False):
+    return render(grid_from(rows, mirror), pal, outline, upscale)
 
 
 class Canvas:
-    """Region-grid drawing for big procedural sprites (bosses, rocks)."""
+    """Region-grid drawing for big procedural sprites (bosses, rocks).
 
-    def __init__(self, w, h, mirror=True):
-        self.w, self.h, self.mirror = w, h, mirror
-        self.g = [['.'] * w for _ in range(h)]
+    scale draws the same shapes at a higher resolution: coordinates passed in
+    stay the same, the result simply has more pixels (and more detail)."""
 
-    def put(self, x, y, ch):
+    def __init__(self, w, h, mirror=True, scale=1.0):
+        self.s = scale
+        self.w, self.h, self.mirror = int(round(w * scale)), int(round(h * scale)), mirror
+        self.g = [['.'] * self.w for _ in range(self.h)]
+
+    def _px(self, x, y, ch):
         x, y = int(x), int(y)
         if 0 <= x < self.w and 0 <= y < self.h:
             self.g[y][x] = ch
             if self.mirror:
                 self.g[y][self.w - 1 - x] = ch
+
+    def put(self, x, y, ch):
+        s = self.s
+        if s == 1.0:
+            self._px(x, y, ch)
+            return
+        n = max(1, int(round(s)))
+        bx, by = int(x * s), int(y * s)
+        for yy in range(by, by + n):
+            for xx in range(bx, bx + n):
+                self._px(xx, yy, ch)
 
     def get(self, x, y):
         if 0 <= x < self.w and 0 <= y < self.h:
@@ -157,26 +267,33 @@ class Canvas:
         return '.'
 
     def rect(self, x, y, w, h, ch):
-        for yy in range(int(y), int(y + h)):
-            for xx in range(int(x), int(x + w)):
-                self.put(xx, yy, ch)
+        s = self.s
+        for yy in range(int(round(y * s)), int(round((y + h) * s))):
+            for xx in range(int(round(x * s)), int(round((x + w) * s))):
+                self._px(xx, yy, ch)
 
     def ellipse(self, cx, cy, rx, ry, ch):
+        s = self.s
+        cx, cy, rx, ry = cx * s, cy * s, rx * s, ry * s
         for y in range(int(cy - ry) - 1, int(cy + ry) + 2):
             for x in range(int(cx - rx) - 1, int(cx + rx) + 2):
                 dx = (x + 0.5 - cx) / max(rx, 0.1)
                 dy = (y + 0.5 - cy) / max(ry, 0.1)
                 if dx * dx + dy * dy <= 1.0:
-                    self.put(x, y, ch)
+                    self._px(x, y, ch)
 
     def ring(self, cx, cy, r0, r1, ch):
+        s = self.s
+        cx, cy, r0, r1 = cx * s, cy * s, r0 * s, r1 * s
         for y in range(int(cy - r1) - 1, int(cy + r1) + 2):
             for x in range(int(cx - r1) - 1, int(cx + r1) + 2):
                 d = math.hypot(x + 0.5 - cx, y + 0.5 - cy)
                 if r0 <= d <= r1:
-                    self.put(x, y, ch)
+                    self._px(x, y, ch)
 
     def poly(self, pts, ch):
+        s = self.s
+        pts = [(px * s, py * s) for px, py in pts]
         xs = [p[0] for p in pts]
         ys = [p[1] for p in pts]
         n = len(pts)
@@ -193,25 +310,27 @@ class Canvas:
                             inside = not inside
                     j = i
                 if inside:
-                    self.put(x, y, ch)
+                    self._px(x, y, ch)
 
     def line(self, x0, y0, x1, y1, ch):
+        s = self.s
+        x0, y0, x1, y1 = x0 * s, y0 * s, x1 * s, y1 * s
         steps = int(max(abs(x1 - x0), abs(y1 - y0))) + 1
         for i in range(steps + 1):
             t = i / max(steps, 1)
-            self.put(round(x0 + (x1 - x0) * t), round(y0 + (y1 - y0) * t), ch)
+            self._px(round(x0 + (x1 - x0) * t), round(y0 + (y1 - y0) * t), ch)
 
     def replace_in(self, x, y, w, h, src, dst):
         for yy in range(int(y), int(y + h)):
             for xx in range(int(x), int(x + w)):
                 if self.get(xx, yy) == src:
-                    self.put(xx, yy, dst)
+                    self._px(xx, yy, dst)
 
     def rows(self):
         return [''.join(r) for r in self.g]
 
-    def surface(self, pal, outline=True):
-        return render(self.rows(), pal, outline)
+    def surface(self, pal, outline=True, upscale=False):
+        return render(self.rows(), pal, outline, upscale)
 
 
 def flip_v(s):
@@ -703,10 +822,22 @@ def hull_palette(hull_id, paint=None):
 
 
 def hull_sprite(hull_id, paint=None):
+    """Player hull at 2x detail, with red/green navigation lights on the wingtips."""
     key = ('hull', hull_id, paint)
     s = _cache.get(key)
     if s is None:
-        s = sprite(HULL_ART[hull_id]['rows'], hull_palette(hull_id, paint))
+        grid = scale2x(grid_from(HULL_ART[hull_id]['rows']))
+        s = render(grid, hull_palette(hull_id, paint), detail=True)
+        h, w = len(grid), len(grid[0])
+        best_y, best_x, best_w = None, 0, 0
+        for y in range(int(h * 0.35), h - 2):
+            xs = [x for x in range(w) if grid[y][x] != '.']
+            if xs and xs[-1] - xs[0] > best_w:
+                best_y, best_x, best_w = y, xs[0], xs[-1] - xs[0]
+        if best_y is not None:
+            for dy in (0, 1):
+                s.set_at((best_x + 1, best_y + 1 + dy), (255, 70, 80))
+                s.set_at((w - best_x, best_y + 1 + dy), (90, 255, 120))
         _cache[key] = s
     return s
 
@@ -735,7 +866,7 @@ def hull_geometry(hull_id):
         wing=(best_w / 2.0 + 1, best_y - cy - 1),
         under=(max(3, best_w / 4.0), best_y - cy + 2),
         tail=(0, bottom - cy),
-        engines=[(-2.5, bottom - cy + 1), (2.5, bottom - cy + 1)],
+        engines=[(-5, bottom - cy + 1), (5, bottom - cy + 1)],
     )
     _cache[key] = g
     return g
@@ -786,7 +917,7 @@ def part_sprite(name, hull='falcon', paint=None):
             base = HULL_ART[hull]['pal']
             pal = make_pal(base['body'], base['acc'], glass=(120, 240, 255), glow=(255, 170, 60),
                            metal=(132, 138, 164))
-        s = sprite(PART_ROWS[name], pal, mirror=mirror)
+        s = sprite(PART_ROWS[name], pal, mirror=mirror, upscale=True)
         _cache[key] = s
     return s
 
@@ -797,7 +928,7 @@ DRONE_ROWS = ["..##", ".#CC", "##CW", "#AAA", ".#M.", "..E."]
 def drone_sprite():
     s = _cache.get('drone')
     if s is None:
-        s = sprite(DRONE_ROWS, make_pal((170, 180, 210), (80, 150, 255), glass=(120, 255, 200)),
+        s = sprite(DRONE_ROWS, make_pal((170, 180, 210), (80, 150, 255), glass=(120, 255, 200)), upscale=True,
                    mirror='even')
         _cache['drone'] = s
     return s
@@ -955,7 +1086,9 @@ def enemy_sprite(kind, sector):
         if kind == 'nest':
             s = nest_sprite(sector)
         else:
-            s = flip_v(sprite(ENEMY_ROWS[kind], pal, mirror=_ENEMY_MIRROR.get(kind, 'odd')))
+            # flip the template (not the finished image) so light still comes from the top
+            grid = grid_from(ENEMY_ROWS[kind], _ENEMY_MIRROR.get(kind, 'odd'))[::-1]
+            s = render(grid, pal, upscale=True)
         _cache[key] = s
     return s
 
@@ -973,7 +1106,7 @@ def nest_sprite(sector):
     c.ellipse(11, 10, 2.6, 2.4, 'R')
     c.put(10, 9, 'Y')
     c.rect(2, 16, 3, 3, '4')
-    return c.surface(pal)
+    return c.surface(pal, upscale=True)
 
 
 def asteroid_sprite(size, seed, ore=False):
@@ -1085,33 +1218,34 @@ def player_shot(kind):
     if s is not None:
         return s
     if kind == 'main':
-        s = pygame.Surface((3, 9), pygame.SRCALPHA)
-        s.fill((255, 170, 40), (0, 2, 3, 7))
-        s.fill((255, 240, 150), (0, 0, 3, 5))
-        s.fill(WHITE, (1, 0, 1, 4))
+        s = pygame.Surface((4, 12), pygame.SRCALPHA)
+        s.fill((255, 150, 30), (0, 3, 4, 9))
+        s.fill((255, 240, 150), (0, 0, 4, 7))
+        s.fill(WHITE, (1, 0, 2, 5))
     elif kind == 'main_big':
-        s = pygame.Surface((5, 11), pygame.SRCALPHA)
-        s.fill((255, 120, 30), (0, 3, 5, 8))
-        s.fill((255, 230, 120), (1, 0, 3, 8))
-        s.fill(WHITE, (2, 0, 1, 6))
+        s = pygame.Surface((6, 15), pygame.SRCALPHA)
+        s.fill((255, 110, 30), (0, 4, 6, 11))
+        s.fill((255, 230, 120), (1, 0, 4, 11))
+        s.fill(WHITE, (2, 0, 2, 8))
     elif kind == 'spread':
-        s = pygame.Surface((4, 4), pygame.SRCALPHA)
-        s.fill((255, 200, 70))
-        s.fill(WHITE, (1, 1, 2, 2))
+        s = pygame.Surface((6, 6), pygame.SRCALPHA)
+        s.fill((255, 170, 50), (1, 0, 4, 6))
+        s.fill((255, 170, 50), (0, 1, 6, 4))
+        s.fill(WHITE, (2, 2, 2, 2))
     elif kind == 'wing':
-        s = pygame.Surface((3, 7), pygame.SRCALPHA)
-        s.fill((60, 200, 255), (0, 1, 3, 6))
-        s.fill((200, 250, 255), (1, 0, 1, 6))
+        s = pygame.Surface((4, 10), pygame.SRCALPHA)
+        s.fill((40, 160, 255), (0, 2, 4, 8))
+        s.fill((170, 240, 255), (1, 0, 2, 9))
     elif kind == 'rear':
-        s = pygame.Surface((3, 6), pygame.SRCALPHA)
-        s.fill((120, 255, 140), (0, 0, 3, 6))
-        s.fill(WHITE, (1, 1, 1, 4))
+        s = pygame.Surface((4, 9), pygame.SRCALPHA)
+        s.fill((90, 240, 120), (0, 0, 4, 9))
+        s.fill(WHITE, (1, 1, 2, 6))
     elif kind == 'drone':
-        s = pygame.Surface((2, 5), pygame.SRCALPHA)
-        s.fill((150, 220, 255))
-        s.fill(WHITE, (0, 0, 2, 2))
+        s = pygame.Surface((3, 7), pygame.SRCALPHA)
+        s.fill((120, 200, 255))
+        s.fill(WHITE, (1, 0, 1, 4))
     elif kind == 'missile':
-        s = sprite(["W", "9", "8", "R"], PART_PAL, mirror=None, outline=True)
+        s = sprite(["W", "9", "8", "R"], PART_PAL, mirror=None, outline=True, upscale=True)
     else:
         s = pygame.Surface((3, 3), pygame.SRCALPHA)
         s.fill(WHITE)
@@ -1145,24 +1279,28 @@ PICKUP_STYLE = {
 
 
 def pickup_sprite(kind, frame=0):
+    """23 px capsule: dark rim, coloured bevel, inset face and a big letter."""
     key = ('pick', kind, frame)
     s = _cache.get(key)
     if s is None:
         letter, col = PICKUP_STYLE[kind]
-        s = pygame.Surface((15, 15), pygame.SRCALPHA)
-        dark = scale(col, 0.4)
-        pygame.draw.rect(s, (14, 12, 26), (0, 0, 15, 15), border_radius=4)
-        pygame.draw.rect(s, col, (1, 1, 13, 13), border_radius=3)
-        pygame.draw.rect(s, dark, (2, 2, 11, 11), border_radius=2)
+        n = 23
+        s = pygame.Surface((n, n), pygame.SRCALPHA)
+        dark = scale(col, 0.35)
+        pygame.draw.rect(s, (14, 12, 26), (0, 0, n, n), border_radius=6)
+        pygame.draw.rect(s, scale(col, 0.7), (1, 1, n - 2, n - 2), border_radius=5)
+        pygame.draw.rect(s, mix(col, WHITE, 0.35), (1, 1, n - 2, n - 4), border_radius=5)
+        pygame.draw.rect(s, col, (2, 2, n - 4, n - 5), border_radius=4)
+        pygame.draw.rect(s, dark, (4, 4, n - 8, n - 8), border_radius=3)
         if kind in ('overdrive', 'bounty'):
-            for i in range(-12, 14, 4):
-                pygame.draw.line(s, scale(col, 0.7), (2 + i, 12), (12 + i, 2))
-            pygame.draw.rect(s, dark, (4, 3, 7, 9))
+            for i in range(-n, n, 5):
+                pygame.draw.line(s, scale(col, 0.75), (4 + i, n - 5), (n - 5 + i, 4), 2)
+            pygame.draw.rect(s, dark, (7, 5, n - 14, n - 10))
         if frame:
-            pygame.draw.line(s, mix(col, WHITE, 0.6), (2, 3), (3, 2))
-            pygame.draw.line(s, WHITE, (3, 2), (6, 2))
-        g = text_surface(letter, WHITE, 1, (10, 8, 22))
-        s.blit(g, (8 - g.get_width() // 2, 4))
+            pygame.draw.line(s, WHITE, (4, 3), (10, 3))
+            pygame.draw.line(s, mix(col, WHITE, 0.6), (3, 4), (3, 7))
+        g = text_surface(letter, WHITE, 2, (10, 8, 22))
+        s.blit(g, (n // 2 - g.get_width() // 2 + 1, n // 2 - g.get_height() // 2 + 1))
         _cache[key] = s
     return s
 

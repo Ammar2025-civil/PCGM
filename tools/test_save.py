@@ -58,6 +58,17 @@ check('stars filtered', data['stars'] == {'1': 7})
 check('best kept', data['best'] == {'1': 12345})
 check('stats computable', shop.compute_stats(data)['hp'] == 11)
 
+# 3b. volumes: valid values kept, junk repaired, old 'muted' saves become silent
+write_raw(json.dumps({'started': True, 'music_vol': 3, 'sfx_vol': 99}))
+data, _ = save.load()
+check('volumes kept / clamped', data['music_vol'] == 3 and data['sfx_vol'] == 10)
+write_raw(json.dumps({'started': True, 'muted': True}))
+data, _ = save.load()
+check('old muted save -> both volumes 0', data['music_vol'] == 0 and data['sfx_vol'] == 0)
+write_raw(json.dumps({'started': True, 'music_vol': 'loud'}))
+data, _ = save.load()
+check('bad volume -> default', data['music_vol'] == 8 and data['sfx_vol'] == 7)
+
 # 4. partial save (old/missing keys) fills in defaults
 write_raw(json.dumps({'started': True, 'credits': 777}))
 data, existed = save.load()

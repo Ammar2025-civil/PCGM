@@ -12,6 +12,7 @@ import pygame  # noqa: E402
 def main(out, levels):
     pygame.init()
     app, screen = sim.make_app()
+    from config import PF_X, PF_W, PF_H
     os.makedirs(out, exist_ok=True)
     for lv in levels:
         app.start_level(lv)
@@ -36,7 +37,7 @@ def main(out, levels):
                 if key not in shots and g.boss.fighting and g.boss.trans == 0 and g.boss.t % 200 == 150:
                     shots.add(key)
                     g.draw(screen)
-                    pygame.image.save(screen.subsurface((185, 0, 270, 360)), os.path.join(out, 'B%03d_p%d.png' % (lv, ph)))
+                    pygame.image.save(screen.subsurface((PF_X, 0, PF_W, PF_H)), os.path.join(out, 'B%03d_p%d.png' % (lv, ph)))
             if app.scene is not g or g.result is not None:
                 break
         b = g.boss
