@@ -58,7 +58,8 @@ class Pickup:
                 if d > 0.1:
                     self.x += dx / d * sp
                     self.y += dy / d * sp
-        self.x = max(4, min(PF_W - 4, self.x))
+        lo, hi = g.hazards.bounds_at(self.y)
+        self.x = max(lo + 4, min(hi - 4, self.x))
         if self.y > PF_H + 12 or (not self.part and self.t > 600):
             self.alive = False
 

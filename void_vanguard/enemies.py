@@ -539,6 +539,9 @@ def spawn_wave(g, w):
             x = rnd.uniform(36, PF_W - 36)
             add('nest', x, -20, p_ground, i * 50)
     elif pat == 'turrets':
+        if not g.hazards.corridor_active():
+            spawn_wave(g, dict(w, pattern='line', kind='gunner'))
+            return
         for i in range(n):
             s = -1 if i % 2 == 0 else 1
             add('turret', 0, -12, (lambda ss: (lambda e, gg: p_wall(e, gg, ss)))(s), i * 40)

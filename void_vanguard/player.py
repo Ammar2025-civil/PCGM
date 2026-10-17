@@ -108,7 +108,7 @@ class Player:
             dy *= 0.7071
         self.moving = (dx, dy)
         self.lean += (dx - self.lean) * 0.25
-        self.x += dx * self.speed + g.gravity_x * 9.0 * self.stats.get('gravity_resist', 1.0)
+        self.x += dx * self.speed + g.gravity_x * 14.0 * self.stats.get('gravity_resist', 1.0)
         self.y += dy * self.speed
         lo, hi = g.play_bounds()
         self.x = max(lo + 7, min(hi - 7, self.x))

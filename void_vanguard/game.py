@@ -139,14 +139,20 @@ class GameScene:
         return self.hazards.bounds_at(self.player.y)
 
     def nearest_target(self, x, y, maxd=None):
-        best, bd = None, (maxd * maxd if maxd else 1e12)
+        """Closest thing worth shooting (asteroids only if nothing else is around)."""
+        lim = maxd * maxd if maxd else 1e12
+        best, bd = None, lim
+        rock, rd = None, lim
         for e in self.targets():
             if not e.alive or e.y < -4:
                 continue
             d = (e.x - x) ** 2 + (e.y - y) ** 2
-            if d < bd:
+            if e.kind == 'asteroid':
+                if d < rd:
+                    rock, rd = e, d
+            elif d < bd:
                 best, bd = e, d
-        return best
+        return best or rock
 
     def targets(self):
         t = [e for e in self.enemies if e.alive]
