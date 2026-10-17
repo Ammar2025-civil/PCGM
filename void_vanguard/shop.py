@@ -48,12 +48,12 @@ HULL_BY_ID = {h['id']: h for h in HULLS}
 
 STAR_UNLOCKS = [
     (10, 'spread2', 'START WITH SPREAD LV2'),
-    (25, 'radar', 'GOLDEN RADAR: MORE GOLDEN SHIPS'),
+    (25, 'radar', 'GOLDEN RADAR: MORE GOLD SHIPS'),
     (40, 'drone', 'START WITH A HELPER DRONE'),
     (60, 'bombcap', '+1 BOMB AT THE START'),
     (80, 'partmagnet', 'YOUR MAGNET PULLS PARTS TOO'),
     (100, 'wing', 'START WITH WING GUNS'),
-    (130, 'keeper', 'COMBO KEEPER: 1ST HIT HALVES CHAIN'),
+    (130, 'keeper', 'CHAIN KEEPER: 1ST HIT HALVES IT'),
     (160, 'overdrive', 'OVERDRIVE LASTS 50% LONGER'),
     (200, 'starborn', 'UNLOCKS THE STARBORN HULL'),
     (250, 'spread3', 'START WITH SPREAD LV3'),

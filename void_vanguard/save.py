@@ -59,6 +59,8 @@ _path = None
 
 def save_path():
     global _path
+    if _path is None and os.environ.get('VV_SAVE_PATH'):
+        _path = os.environ['VV_SAVE_PATH']
     if _path is None:
         d = game_dir()
         if not _writable(d):
@@ -86,8 +88,8 @@ def _level_map(v, lo, hi):
     out = {}
     if isinstance(v, dict):
         for k, val in v.items():
-            lv = _int(k, 1, 100, None)
-            if lv is None:
+            lv = _int(k, -10 ** 9, 10 ** 9, None)
+            if lv is None or not 1 <= lv <= 100:
                 continue
             iv = _int(val, lo, hi, None)
             if iv is not None:

@@ -28,44 +28,124 @@ MOVE_KEYS = {
 class App:
     def __init__(self, screen, headless=False):
         import audio
+        import save
+        import scenes
         self.screen = screen
         self.headless = headless
         self.clock = pygame.time.Clock()
         self.input = Input()
         self.idle_input = Input()
         self.running = True
-        self.audio = audio.Audio()
+        self.data, self.has_save = save.load()
+        self.audio = audio.Audio(muted=self.data['muted'])
         self.level = 1
-        self.scene = None
         self.joy = []
         self.axis_state = {}
         self._init_joysticks()
-        self.start_level(1)
+        self.scene = scenes.TitleScene(self)
+
+    # ------------------------------------------------------------ save
+    def save_now(self):
+        import save
+        save.write(self.data)
+
+    def best_score(self, level):
+        return self.data['best'].get(str(level), 0)
+
+    def bank_credits(self):
+        return self.data['credits']
+
+    def record_death(self, level):
+        key = str(level)
+        self.data['deaths'][key] = self.data['deaths'].get(key, 0) + 1
+        self.save_now()
+
+    def toggle_mute(self):
+        self.audio.set_muted(not self.audio.muted)
+        self.data['muted'] = self.audio.muted
+        self.save_now()
 
     # ------------------------------------------------------------ scenes
+    def goto_title(self):
+        import scenes
+        self.scene = scenes.TitleScene(self)
+
+    def goto_hangar(self):
+        import scenes
+        self.scene = scenes.HangarScene(self)
+
+    def new_game(self):
+        import save
+        muted = self.data['muted']
+        self.data = save.default_save()
+        self.data['muted'] = muted
+        self.data['started'] = True
+        self.has_save = True
+        self.save_now()
+        self.start_level(1)
+
     def start_level(self, level):
         import game
         import shop
         self.level = level
-        self.scene = game.GameScene(self, level, shop.default_stats())
+        d = self.data
+        deaths = d['deaths'].get(str(level), 0)
+        extra_shield = 2 if deaths >= 6 else (1 if deaths >= 3 else 0)   # quiet adaptive difficulty
+        stats = shop.compute_stats(d, extra_shield)
+        self.scene = game.GameScene(self, level, stats, shop.game_flags(d))
 
     def retry_level(self):
         self.start_level(self.level)
 
-    def goto_hangar(self):
-        self.start_level(self.level)
-
     def level_complete(self, result):
-        self.start_level(min(100, self.level + 1))
+        import scenes
+        import shop
+        d = self.data
+        level = result['level']
+        key = str(level)
+        hull = shop.HULL_BY_ID.get(d['hull'], shop.HULLS[0])
+        mult = hull.get('credit_mult', 1.0)
+        banked = int((result['run_credits'] + result['clear_bonus'] + result['star_bonus']) * mult)
+        result['banked'] = banked
+        result['credit_mult'] = mult
+        d['credits'] += banked
+        before = shop.owned_star_unlocks(d)
+        d['stars'][key] = d['stars'].get(key, 0) | result['stars']
+        prev_best = d['best'].get(key, 0)
+        result['new_best'] = prev_best > 0 and result['score'] > prev_best
+        if result['score'] > prev_best:
+            d['best'][key] = result['score']
+        d['deaths'].pop(key, None)
+        d['level_unlocked'] = max(d['level_unlocked'], min(100, level + 1))
+        d['selected'] = min(d['level_unlocked'], level + 1)
+        d['total_kills'] += result['kills']
+        if result['golden']:
+            d['golden'] += 1
+        unlocks = []
+        if level % 10 == 0:
+            for h in shop.HULLS:
+                if h['unlock'] == level // 10 and h['id'] not in d['hulls']:
+                    d['hulls'].append(h['id'])
+                    unlocks.append(('hull', h['id']))
+        after = shop.owned_star_unlocks(d)
+        for need, k, txt in shop.STAR_UNLOCKS:
+            if k in after and k not in before:
+                unlocks.append(('star', txt))
+        result['first_complete'] = level == 100 and not d['complete']
+        if level == 100:
+            d['complete'] = True
+        self.save_now()
+        self.scene = scenes.ResultsScene(self, result, unlocks)
 
-    def record_death(self, level):
-        pass
+    def after_results(self, result):
+        import scenes
+        if result.get('first_complete'):
+            self.scene = scenes.VictoryScene(self)
+        else:
+            self.goto_hangar()
 
-    def best_score(self, level):
-        return 0
-
-    def bank_credits(self):
-        return 0
+    def quit(self):
+        self.running = False
 
     # ------------------------------------------------------------ input
     def _init_joysticks(self):

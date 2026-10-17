@@ -52,7 +52,9 @@ def bot_input(g, inp, rnd, god=False):
         inp.bomb = True
 
 
-def make_app(save_dir=None):
+def make_app(save_path=None):
+    import tempfile
+    os.environ['VV_SAVE_PATH'] = save_path or os.path.join(tempfile.mkdtemp(), 'savegame.json')
     import main
     screen = main.create_window()
     app = main.App(screen, headless=True)
