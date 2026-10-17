@@ -145,6 +145,8 @@ class Player:
             d.x = self.x + math.cos(a) * 21
             d.y = self.y + 2 + math.sin(a) * 15
         self.flicker = (self.flicker + 1) % 1000
+        if self.bounty > 0 and self.flicker % 4 == 0:
+            g.fx.particle(self.x + (self.flicker % 16) - 8, self.y + 6, 0, 1.2, 16, 2, (200, 110, 255), 'sq', 0.97)
 
     def magnet_radius(self):
         return self.magnet_range * (1.8 if self.magnet_t > 0 else 1.0)

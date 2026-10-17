@@ -130,7 +130,7 @@ You don't need to touch the game code to change the numbers:
 
 | File | What you can change |
 |---|---|
-| `void_vanguard/level_data.py` | Level length, acts, breathers, the difficulty curve across 100 levels, enemy types and wave patterns per sector, hazard strength per level, golden ship chance, per-level overrides |
+| `void_vanguard/level_data.py` | Level length, acts, breathers, the difficulty curve across 100 levels, enemy types and wave patterns per sector, hazard strength per level, per-sector difficulty `tune`, golden ship chance, per-level overrides |
 | `void_vanguard/shop.py` | Upgrade prices, max levels, hull stats and traits, star reward thresholds |
 | `void_vanguard/config.py` | Player speed, hitbox, graze radius, fire rate, invulnerability time, combo tiers |
 
@@ -192,3 +192,16 @@ void_vanguard/
 tools/            test and development scripts (not needed to play)
 build_exe.bat     one-click Windows .exe build
 ```
+
+### Developer tools (optional)
+
+These run without a window and use a temporary save, so they never touch your real progress:
+
+| Command | What it does |
+|---|---|
+| `python tools/smoke_test.py` | Plays all 100 levels in god mode and reports any crash |
+| `python tools/boss_test.py OUTDIR` | Fights every boss and saves a screenshot of each phase |
+| `python tools/balance_run.py OUT.csv` | A bot plays levels 1-100 in order, buying upgrades, and logs income, boss times and hits taken |
+| `python tools/fit_costs.py OUT.csv` | Shows how fast the shop gets bought out with that income |
+| `python tools/test_save.py` | Save-file robustness tests (missing, empty, garbage, wrong types) |
+| `python tools/spritesheet.py sheet.png` | Dumps every generated sprite to one image |

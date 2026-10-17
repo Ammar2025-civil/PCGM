@@ -87,7 +87,7 @@ class Boss:
         self.rnd = random.Random(game.level * 13 + 5)
         self.x = PF_W / 2
         self.y = -70.0
-        hp = levels.expected_dps(game.level) * D.END_FIGHT_SECONDS[self.kind] * self.hp_scale
+        hp = levels.expected_dps(game.level) * D.END_FIGHT_SECONDS[self.kind] * self.hp_scale * game.plan.boss_hp
         self.max_hp = self.hp = hp
         self.t = 0
         self.alive = True

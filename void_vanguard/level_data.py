@@ -84,6 +84,9 @@ GOLDEN_CHANCE_RADAR = 0.75  # chance once the Golden Radar star unlock is owned
 # mechanic: the sector's new hazard (stays in the mix later at lower strength)
 # intensity: hazard strength for levels 1..10 of the sector (0 = off, 1 = full)
 # enemies / patterns: weights (higher = more common)
+# tune (optional): multipliers on the difficulty curve for this sector only,
+#   e.g. tune=dict(density=0.9, fire_rate=0.9) makes a sector a bit easier;
+#   boss_hp multiplies the health of that sector's frigates and bosses
 SECTORS = {
     1: dict(
         name='EARTH ORBIT', mechanic='formations',
@@ -116,7 +119,7 @@ SECTORS = {
                  'kamikaze': 1},
         patterns={'line': 3, 'hover': 2, 'swoop': 2, 'v': 2, 'wall': 2, 'column': 1, 'sine': 1,
                   'ambush': 1, 'rush': 1},
-        miniboss='glacier', boss='cryo',
+        miniboss='glacier', boss='cryo', tune=dict(density=0.95),
     ),
     5: dict(
         name='SOLAR FLARE ZONE', mechanic='flares',
@@ -134,7 +137,7 @@ SECTORS = {
                  'minelayer': 1, 'kamikaze': 1},
         patterns={'column': 3, 'v': 2, 'line': 2, 'hover': 2, 'turrets': 2, 'snake': 1, 'ambush': 1,
                   'rush': 1},
-        miniboss='secdrone', boss='warden',
+        miniboss='secdrone', boss='warden', tune=dict(density=0.75, fire_rate=0.8),
     ),
     7: dict(
         name='BLACK HOLE RIM', mechanic='gravity',
@@ -143,7 +146,7 @@ SECTORS = {
                  'sniper': 2, 'shielded': 1, 'minelayer': 1},
         patterns={'circle': 3, 'swoop': 2, 'sine': 2, 'snake': 2, 'hover': 2, 'v': 1, 'line': 1,
                   'ambush': 1, 'rush': 1},
-        miniboss='graviton', boss='horizon',
+        miniboss='graviton', boss='horizon', tune=dict(density=1.18, fire_rate=1.15, boss_hp=1.35),
     ),
     8: dict(
         name='ALIEN HIVE', mechanic='hive',
@@ -152,7 +155,7 @@ SECTORS = {
                  'sniper': 1, 'shielded': 1, 'minelayer': 1},
         patterns={'nests': 3, 'rush': 2, 'rain': 2, 'swoop': 2, 'snake': 2, 'v': 1, 'hover': 1,
                   'ambush': 1, 'pincer': 1},
-        miniboss='brood', boss='queen',
+        miniboss='brood', boss='queen', tune=dict(density=1.12, fire_rate=1.2, boss_hp=1.45),
     ),
     9: dict(
         name='WORMHOLE', mechanic='wormhole',
@@ -179,7 +182,7 @@ ECHO_INTENSITY = 0.35
 
 # ============================================================== per-level overrides
 # Any level can be hand-tuned here. Keys you can use:
-#   density, enemy_hp, bullet_speed, fire_rate, aggression  (multipliers on the curve)
+#   density, enemy_hp, bullet_speed, fire_rate, aggression, boss_hp  (multipliers)
 #   acts (number of acts), golden (True / False), intensity (hazard strength 0..1)
 LEVEL_OVERRIDES = {
     1: dict(density=0.6, fire_rate=0.6, acts=3, golden=True),

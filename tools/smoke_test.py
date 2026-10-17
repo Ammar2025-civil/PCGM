@@ -17,11 +17,15 @@ import pygame  # noqa: E402
 def main(first=1, last=100):
     pygame.init()
     app, screen = sim.make_app()
+    import shop
+    # fly a well-upgraded ship so late levels finish in reasonable time
+    for u in shop.UPGRADES:
+        app.data['upgrades'][u['id']] = u['max'] * 3 // 4
     bad = []
     t0 = time.time()
     for lv in range(first, last + 1):
         try:
-            res = sim.run_level(app, screen, lv, 60 * 60 * 6, True, draw_every=7, dmg_boost=3.0, verbose=False)
+            res = sim.run_level(app, screen, lv, 60 * 60 * 6, True, draw_every=7, dmg_boost=2.0, verbose=False)
             ok = res['finished']
             print('level %3d %-6s %5.1fs real, %d frames, boss %.0fs' % (
                 lv, 'OK' if ok else 'STUCK', res['secs'], res['frames'], res['boss_time'] / 60.0), flush=True)

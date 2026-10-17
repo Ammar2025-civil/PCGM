@@ -629,14 +629,14 @@ class VictoryScene:
         shade = pygame.Surface((SCREEN_W, SCREEN_H), pygame.SRCALPHA)
         shade.fill((0, 0, 10, 150))
         screen.blit(shade, (0, 0))
-        y0 = SCREEN_H - self.t * 0.45
+        t = art.big_text('VICTORY', 4, (255, 250, 200), (255, 150, 40), (20, 8, 30), (90, 20, 70))
+        screen.blit(t, (SCREEN_W // 2 - t.get_width() // 2, 14))
+        top = 24 + t.get_height()
+        y0 = SCREEN_H - min(self.t * 0.45, SCREEN_H - top - 10 + 16 * (len(self.LINES) - 12))
         for i, line in enumerate(self.LINES):
             y = y0 + i * 16
-            if -10 < y < SCREEN_H:
+            if top < y < SCREEN_H - 24:
                 col = GOLD if line in ('VOID VANGUARD', 'THANKS FOR PLAYING!') else WHITE
                 art.text(screen, line, SCREEN_W // 2, int(y), col, 1, 'c')
-        if y0 + len(self.LINES) * 16 < SCREEN_H * 0.6:
-            t = art.big_text('VICTORY', 4, (255, 250, 200), (255, 150, 40), (20, 8, 30), (90, 20, 70))
-            screen.blit(t, (SCREEN_W // 2 - t.get_width() // 2, 60))
         if self.t > 120 and (self.t // 25) % 2 == 0:
             art.text(screen, 'PRESS ENTER', SCREEN_W // 2, 344, (255, 220, 120), 1, 'c')

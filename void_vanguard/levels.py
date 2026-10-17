@@ -56,7 +56,7 @@ def upgrade_power(level):
 def expected_dps(level):
     """Firepower an end fight is balanced around: typical shop upgrades for this
     point in the game plus a mid-level pickup loadout."""
-    base = 22.0 + 16.0 * min(1.0, level / 60.0) + 12.0 * max(0.0, (level - 60) / 40.0)
+    base = 22.0 + 16.0 * min(1.0, level / 60.0) + 22.0 * max(0.0, (level - 60) / 40.0)
     return base * upgrade_power(level)
 
 
@@ -124,7 +124,9 @@ def build(level, golden_radar=False):
     k = index_in_sector(level)
     sec = D.SECTORS[s]
     ov = D.LEVEL_OVERRIDES.get(level, {})
-    diff = {n: curve(n, level) * ov.get(n, 1.0) for n in D.DIFFICULTY}
+    tune = sec.get('tune', {})
+    diff = {n: curve(n, level) * ov.get(n, 1.0) * tune.get(n, 1.0) for n in D.DIFFICULTY}
+    boss_hp = tune.get('boss_hp', 1.0) * ov.get('boss_hp', 1.0)
 
     # ---------------------------------------------------- hazards
     hazards = {}
@@ -227,5 +229,6 @@ def build(level, golden_radar=False):
     p.boss_id = sec['boss'] if p.end_kind == 'boss' else sec['miniboss'] if p.end_kind == 'miniboss' else 'frigate'
     p.has_golden = has_golden
     p.challenges = make_challenges(level, rnd, has_golden)
+    p.boss_hp = boss_hp
     p.seed = level * 31 + 7
     return p
