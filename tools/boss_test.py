@@ -12,7 +12,6 @@ import pygame  # noqa: E402
 def main(out, levels):
     pygame.init()
     app, screen = sim.make_app()
-    import game
     os.makedirs(out, exist_ok=True)
     for lv in levels:
         app.start_level(lv)

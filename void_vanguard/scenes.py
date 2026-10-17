@@ -8,7 +8,7 @@ import backgrounds
 import level_data
 import levels
 import shop
-from config import SCREEN_W, SCREEN_H, WHITE, GOLD, TITLE, VERSION
+from config import SCREEN_W, SCREEN_H, WHITE, GOLD, VERSION
 from hud import bar, fmt, LABEL
 
 HULL_UNLOCK_TEXT = 'BEAT THE SECTOR %d BOSS'
@@ -369,7 +369,7 @@ class HangarScene:
         art.text(screen, '>', bx + 180, by + 64, (255, 210, 90) if self.sel == self.ROW_HULL else (80, 80, 120), 2)
         art.text(screen, '%d/%d' % (self.hull_i + 1, len(shop.HULLS)), bx + 190, by + 4, (90, 90, 130), 1, 'r')
 
-        sel_hull = self.row_box(screen, self.ROW_HULL, (bx, by + 154, 196, 34))
+        self.row_box(screen, self.ROW_HULL, (bx, by + 154, 196, 34))
         name_col = WHITE if unlocked else (120, 120, 150)
         tag = '' if not unlocked else (' (FLYING)' if d['hull'] == h['id'] else '')
         art.text(screen, 'SHIP: ' + h['name'] + tag, bx + 6, by + 159, name_col)

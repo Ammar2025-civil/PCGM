@@ -51,12 +51,12 @@ data, existed = save.load()
 check('wrong types -> loads', existed)
 check('credits repaired', data['credits'] == 0)
 check('level clamped', data['level_unlocked'] == 100 and data['selected'] == 1)
-check('upgrades clamped', data['upgrades']['hull'] == 7 and data['upgrades']['damage'] == 3
+check('upgrades clamped', data['upgrades']['hull'] == 8 and data['upgrades']['damage'] == 3
       and data['upgrades']['rate'] == 0 and data['upgrades']['speed'] == 2 and 'bogus' not in data['upgrades'])
 check('bad hull -> falcon', data['hull'] == 'falcon' and data['hulls'] == ['falcon'])
 check('stars filtered', data['stars'] == {'1': 7})
 check('best kept', data['best'] == {'1': 12345})
-check('stats computable', shop.compute_stats(data)['hp'] == 10)
+check('stats computable', shop.compute_stats(data)['hp'] == 11)
 
 # 4. partial save (old/missing keys) fills in defaults
 write_raw(json.dumps({'started': True, 'credits': 777}))

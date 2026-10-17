@@ -1,10 +1,8 @@
 """Side panels, boss health bar, level intro card and menu overlays."""
-import math
-
 import pygame
 
 import art
-from config import PF_W, PF_H, PF_X, PANEL_W, SCREEN_W, SCREEN_H, WHITE, GOLD, COMBO_TIERS, COMBO_WINDOW, \
+from config import PF_W, PF_X, PANEL_W, SCREEN_W, SCREEN_H, WHITE, GOLD, COMBO_TIERS, COMBO_WINDOW, \
     GRAZE_PER_BOMB
 
 _panel_cache = {}

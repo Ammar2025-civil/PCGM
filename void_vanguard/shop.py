@@ -7,13 +7,13 @@ from config import PLAYER_BASE_SPEED, PLAYER_SPEED_PER_LEVEL, PLAYER_HITBOX, PLA
 COST_SCALE = 1.0
 
 UPGRADES = [
-    dict(id='hull', name='HULL STRENGTH', max=7, base=120, growth=1.62, desc='+1 HULL POINT'),
-    dict(id='damage', name='WEAPON DAMAGE', max=10, base=110, growth=1.52, desc='+11% DAMAGE'),
-    dict(id='rate', name='FIRE RATE', max=8, base=140, growth=1.6, desc='SHOOT 6% FASTER'),
-    dict(id='speed', name='ENGINE SPEED', max=6, base=90, growth=1.6, desc='FLY FASTER'),
-    dict(id='bombs', name='STARTING BOMBS', max=4, base=180, growth=1.9, desc='+1 BOMB EACH LEVEL'),
-    dict(id='magnet', name='MAGNET RANGE', max=6, base=80, growth=1.6, desc='PULL CREDITS FROM FURTHER'),
-    dict(id='drones', name='DRONE SLOTS', max=3, base=450, growth=2.6, desc='HOLD +1 HELPER DRONE'),
+    dict(id='hull', name='HULL STRENGTH', max=8, base=240, growth=2.3, desc='+1 HULL POINT'),
+    dict(id='damage', name='WEAPON DAMAGE', max=20, base=160, growth=1.46, desc='+6% DAMAGE'),
+    dict(id='rate', name='FIRE RATE', max=15, base=190, growth=1.6, desc='SHOOT 3% FASTER'),
+    dict(id='speed', name='ENGINE SPEED', max=8, base=145, growth=2.24, desc='FLY FASTER'),
+    dict(id='bombs', name='STARTING BOMBS', max=4, base=480, growth=5.5, desc='+1 BOMB EACH LEVEL'),
+    dict(id='magnet', name='MAGNET RANGE', max=8, base=130, growth=2.24, desc='PULL CREDITS FROM FURTHER'),
+    dict(id='drones', name='DRONE SLOTS', max=3, base=1450, growth=8.0, desc='HOLD +1 HELPER DRONE'),
 ]
 UPGRADE_BY_ID = {u['id']: u for u in UPGRADES}
 
@@ -103,10 +103,10 @@ def compute_stats(save, extra_shield=0):
         paint='gold' if 'gold' in stars else None,
         hp=max(1, 3 + up['hull'] + hull.get('hp', 0)),
         speed=(PLAYER_BASE_SPEED + PLAYER_SPEED_PER_LEVEL * up['speed']) * hull.get('speed', 1.0),
-        dmg=(1.0 + 0.11 * up['damage']) * hull.get('dmg', 1.0),
-        rate=(1.0 - 0.06 * up['rate']) * hull.get('rate', 1.0),
+        dmg=(1.0 + 0.06 * up['damage']) * hull.get('dmg', 1.0),
+        rate=(1.0 - 0.032 * up['rate']) * hull.get('rate', 1.0),
         bombs=1 + up['bombs'] + (1 if 'bombcap' in stars else 0),
-        magnet=(34 + 13 * up['magnet']) * hull.get('magnet', 1.0),
+        magnet=(34 + 10 * up['magnet']) * hull.get('magnet', 1.0),
         drone_slots=1 + up['drones'] + hull.get('drone_slots', 0),
         hitbox=hull.get('hitbox', PLAYER_HITBOX),
         graze=hull.get('graze', PLAYER_GRAZE),

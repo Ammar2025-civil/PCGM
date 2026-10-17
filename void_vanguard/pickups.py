@@ -5,7 +5,7 @@ import random
 import pygame
 
 import art
-from config import PF_W, PF_H
+from config import PF_H
 
 PART_KINDS = ('spread', 'wing', 'missile', 'laser', 'rear', 'drone')
 # weights for random part drops

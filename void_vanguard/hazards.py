@@ -126,10 +126,12 @@ def split_asteroid(mgr, e):
         return
     g = mgr.game
     child = max(4, int(e.size * 0.58))
+    frail = getattr(e, 'frail', False)     # rocks thrown by bosses stay fragile when they split
     for s in (-1, 1):
         a = E.Enemy(g, 'asteroid', e.x + s * 3, e.y, E.make_drift(s * random.uniform(0.6, 1.1), random.uniform(0.6, 1.2)),
-                    size=child, seed=random.randrange(60), ore=e.ore)
+                    0.3 if frail else 1.0, size=child, seed=random.randrange(60), ore=e.ore)
         a.entered = True
+        a.frail = frail
         g.add_enemy(a)
 
 
@@ -453,7 +455,6 @@ class Flares(System):
                         break
 
     def draw_back(self, surf):
-        g = self.g
         if self.state in ('warn', 'sweep'):
             shade = _shadow_strip()
             for d in self.debris:
@@ -562,13 +563,13 @@ class Station(System):
             self.leave_t -= 1
             if self.leave_t == 0 and self.state in ('entering', 'on'):
                 self.state = 'leaving'
-        maxw = PF_W - 130
+        maxw = PF_W - 150
         while not self.rows or self.rows[0][0] > -self.ROW:
             if self.state in ('entering', 'on'):
                 self.walk_t -= 1
                 if self.walk_t <= 0:
                     self.walk_t = self.rnd.randint(12, 30)
-                    total = self.rnd.uniform(40, maxw * (0.55 + 0.45 * self.i))
+                    total = self.rnd.uniform(30, maxw * (0.45 + 0.4 * self.i))
                     bias = self.rnd.uniform(0.2, 0.8)
                     self.tl, self.tr = total * bias, total * (1 - bias)
                 step = 1.4 if self.state == 'on' else 2.5
@@ -599,8 +600,8 @@ class Station(System):
         if self.state == 'on' and not self.fight:
             self.gate_t -= 1
             if self.gate_t <= 0:
-                self.gate_t = int(self.rnd.uniform(220, 340) / (0.35 + self.i))
-                self.gates.append(dict(y=-4, t=self.rnd.randrange(0, 100), off=100, warn=45, on=60))
+                self.gate_t = int(self.rnd.uniform(320, 460) / (0.35 + self.i))
+                self.gates.append(dict(y=-4, t=self.rnd.randrange(0, 100), off=120, warn=50, on=50))
         p = g.player
         if p.alive:
             for gt in self.gates:
@@ -840,7 +841,6 @@ class Wormhole(System):
                 g.sfx('warning_short')
 
     def draw_front(self, surf):
-        g = self.g
         if self.flip_warn > 0 and (self.flip_warn // 6) % 2 == 0:
             pygame.draw.rect(surf, (200, 120, 255), (0, 0, PF_W, PF_H), 3)
             art.text(surf, '< >', PF_W // 2, 170, (230, 200, 255), 2, 'c')

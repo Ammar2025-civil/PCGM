@@ -28,7 +28,7 @@ END_FIGHT_SECONDS = {
 # (value at level 1, value at level 100, curve shape)
 # curve 1.0 = straight line, above 1.0 = gentle start then steeper, below 1.0 = the opposite
 DIFFICULTY = {
-    'enemy_hp':     (1.0, 7.0, 1.2),    # multiplies enemy health (boss health comes from END_FIGHT_SECONDS)
+    'enemy_hp':     (1.0, 4.6, 1.0),    # multiplies enemy health (boss health comes from END_FIGHT_SECONDS)
     'bullet_speed': (1.0, 1.6, 0.9),     # enemy bullet speed
     'fire_rate':    (0.7, 2.0, 0.95),    # how often enemies shoot
     'density':      (0.8, 1.9, 0.9),     # how many enemies per wave
@@ -49,7 +49,7 @@ ENEMY_UNLOCK = {
 # Base number of enemies per wave pattern (multiplied by density and act intensity)
 PATTERN_COUNT = {
     'v': 5, 'line': 5, 'column': 5, 'swoop': 7, 'pincer': 6, 'circle': 6, 'snake': 7,
-    'wall': 7, 'ambush': 3, 'hover': 2, 'rush': 5, 'rain': 7, 'sine': 5, 'nests': 2, 'turrets': 4,
+    'wall': 7, 'ambush': 3, 'hover': 2, 'rush': 5, 'rain': 7, 'sine': 5, 'nests': 2, 'turrets': 3,
 }
 # Roughly how many frames (60 = 1 second) a pattern keeps you busy before the next wave
 PATTERN_GAP = {
@@ -132,7 +132,7 @@ SECTORS = {
         intensity=[0.4, 0.45, 0.55, 0.6, 0.65, 0.7, 0.8, 0.85, 0.9, 0.5],
         enemies={'dart': 2, 'gunner': 2, 'heavy': 1, 'splitter': 1, 'sniper': 1, 'shielded': 2,
                  'minelayer': 1, 'kamikaze': 1},
-        patterns={'column': 3, 'v': 2, 'line': 2, 'hover': 2, 'turrets': 3, 'snake': 1, 'ambush': 2,
+        patterns={'column': 3, 'v': 2, 'line': 2, 'hover': 2, 'turrets': 2, 'snake': 1, 'ambush': 1,
                   'rush': 1},
         miniboss='secdrone', boss='warden',
     ),

@@ -11,7 +11,7 @@ from config import SAVE_NAME
 
 SAVE_VERSION = 1
 UP_IDS = ('hull', 'damage', 'rate', 'speed', 'bombs', 'magnet', 'drones')
-UP_MAX = {'hull': 7, 'damage': 10, 'rate': 8, 'speed': 6, 'bombs': 4, 'magnet': 6, 'drones': 3}
+UP_MAX = {'hull': 8, 'damage': 20, 'rate': 15, 'speed': 8, 'bombs': 4, 'magnet': 8, 'drones': 3}
 HULL_IDS = ('falcon', 'bulwark', 'prospector', 'wraith', 'prism', 'helios', 'breacher', 'singularity',
             'swarmlord', 'phase', 'sovereign', 'starborn')
 

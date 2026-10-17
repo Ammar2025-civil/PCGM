@@ -80,6 +80,7 @@ class Player:
         self.flicker = 0
         self.lean = 0.0
         self.god = False
+        self.safe = False        # set after a level is won: nothing can hurt you any more
         self._sprite_key = None
         self._sprite = None
 
@@ -89,7 +90,8 @@ class Player:
         return self.stats['dmg'] * (2.0 if self.overdrive > 0 else 1.0)
 
     def fire_interval(self):
-        return max(MIN_FIRE_INTERVAL, int(round(BASE_FIRE_INTERVAL * self.stats['rate'])))
+        # fractional: the timer carries the remainder so every fire-rate upgrade counts
+        return max(MIN_FIRE_INTERVAL, BASE_FIRE_INTERVAL * self.stats['rate'])
 
     def part_count(self):
         lo = self.loadout
@@ -163,7 +165,7 @@ class Player:
         lo = self.loadout
         self.fire_t -= 1
         if self.fire_t <= 0:
-            self.fire_t = self.fire_interval()
+            self.fire_t += self.fire_interval()
             ny = y + geo['nose'][1]
             for ox, ang, kind, f in SPREAD_LAYOUT[lo['spread']]:
                 a = math.radians(ang)
@@ -236,9 +238,13 @@ class Player:
     # ------------------------------------------------------------ damage
     def hit(self, dmg=1):
         """Returns True if the hit landed (shield or hull)."""
-        if self.invuln > 0 or not self.alive or self.god:
+        if self.invuln > 0 or not self.alive or self.safe:
             return False
         g = self.game
+        if self.god:                      # test bots: count the hit, take no damage
+            self.invuln = INVULN_FRAMES
+            g.stats['god_hits'] = g.stats.get('god_hits', 0) + 1
+            return False
         if self.shield > 0:
             self.shield -= 1
             self.invuln = 70

@@ -40,13 +40,24 @@ def level_name(level):
     return '%d-%d' % (sector_of(level), index_in_sector(level))
 
 
+# How much stronger shop upgrades make a typical player by each level
+# (measured with tools/balance_run.py + tools/fit_costs.py).
+UPGRADE_POWER = [(1, 1.0), (10, 1.5), (25, 2.0), (50, 2.6), (75, 3.2), (100, 3.6)]
+
+
+def upgrade_power(level):
+    pts = UPGRADE_POWER
+    for (l0, v0), (l1, v1) in zip(pts, pts[1:]):
+        if level <= l1:
+            return v0 + (v1 - v0) * (level - l0) / float(l1 - l0)
+    return pts[-1][1]
+
+
 def expected_dps(level):
     """Firepower an end fight is balanced around: typical shop upgrades for this
     point in the game plus a mid-level pickup loadout."""
-    u = min(1.0, (level - 1) / 85.0)
-    dmg = 1.0 + 1.1 * u
-    rate = 1.0 / (1.0 - 0.42 * u)
-    return 46.0 * dmg * rate
+    base = 22.0 + 16.0 * min(1.0, level / 60.0) + 12.0 * max(0.0, (level - 60) / 40.0)
+    return base * upgrade_power(level)
 
 
 def _weighted(rnd, items):

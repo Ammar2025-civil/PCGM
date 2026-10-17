@@ -14,7 +14,7 @@ import bullets as B
 import enemies as E
 import level_data as D
 import levels
-from config import PF_W, PF_H, WHITE, COMBO_WINDOW
+from config import PF_W, PF_H, COMBO_WINDOW
 
 _cache = {}
 
@@ -209,6 +209,7 @@ class Boss:
             return
         g = self.game
         self.hp -= amount
+        self.dmg_taken = getattr(self, 'dmg_taken', 0.0) + amount
         self.flash = 2
         if g.combo > 0:
             g.combo_t = max(g.combo_t, int(COMBO_WINDOW * 0.7))
@@ -409,9 +410,10 @@ class Boss:
             x, y = self.pos(None)
             a = B.angle_to_player(g, x, y) + random.uniform(-0.4, 0.4)
             sp = random.uniform(1.1, 1.6)
-            e = E.Enemy(g, 'asteroid', x, y, E.make_drift(math.cos(a) * sp, math.sin(a) * sp), size=size,
+            e = E.Enemy(g, 'asteroid', x, y, E.make_drift(math.cos(a) * sp, math.sin(a) * sp), 0.3, size=size,
                         seed=random.randrange(60), ore=random.random() < 0.4)
             e.entered = True
+            e.frail = True
             g.add_enemy(e)
             g.sfx('explode_s')
             yield from wait(16)
@@ -1682,8 +1684,6 @@ class Phantom(Boss):
             ghost.set_alpha(255)
 
     def phase_script(self, i):
-        g = self.game
-
         def p1():
             while True:
                 yield from self.g_blink(rnd_x(), random.uniform(60, 110), 30)

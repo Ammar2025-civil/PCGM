@@ -18,7 +18,7 @@ SAVE_NAME = "savegame.json"
 
 # ---------------------------------------------------------------- player tuning
 PLAYER_BASE_SPEED = 2.35        # pixels per frame before upgrades
-PLAYER_SPEED_PER_LEVEL = 0.16   # added per speed upgrade
+PLAYER_SPEED_PER_LEVEL = 0.12   # added per speed upgrade
 PLAYER_HITBOX = 2.2             # radius of the tiny core that actually gets hit
 PLAYER_GRAZE = 13               # radius that counts as a graze
 INVULN_FRAMES = 90              # mercy invulnerability after a hit

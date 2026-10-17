@@ -250,6 +250,15 @@ def create_window():
     except pygame.error:
         screen = pygame.display.set_mode((SCREEN_W, SCREEN_H), flags)
     pygame.display.set_caption(TITLE)
+    try:
+        import art
+        ic = art.hull_sprite('falcon')
+        icon = pygame.Surface((32, 32), pygame.SRCALPHA)
+        big = pygame.transform.scale(ic, (ic.get_width() * 32 // max(ic.get_size()), ic.get_height() * 32 // max(ic.get_size())))
+        icon.blit(big, (16 - big.get_width() // 2, 16 - big.get_height() // 2))
+        pygame.display.set_icon(icon)
+    except pygame.error:
+        pass
     return screen
 
 

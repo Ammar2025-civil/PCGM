@@ -14,7 +14,7 @@ import hazards
 import hud
 import levels
 import pickups as P
-from config import (PF_W, PF_H, PF_X, SCREEN_W, SCREEN_H, WHITE, COMBO_TIERS, COMBO_WINDOW,
+from config import (PF_W, PF_H, PF_X, WHITE, COMBO_TIERS, COMBO_WINDOW,
                     GRAZE_COMBO_BONUS, GRAZE_PER_BOMB, BOMB_INVULN, MAX_BOMBS, GOLD)
 from effects import Effects
 from player import Player
@@ -87,6 +87,8 @@ class GameScene:
         self.pf = pygame.Surface((PF_W, PF_H))
         self.app.audio.play_music(('sector', self.sector))
         self.set_music(1)
+        if self.plan.end_kind != 'frigate':
+            self.app.audio.prefetch([('boss', self.sector), ('angry', self.sector), ('rage', self.sector)])
 
     # ================================================================ services
     def sfx(self, name, vol=1.0):
@@ -429,7 +431,6 @@ class GameScene:
         self.hazards.update()
         if self.state == 'outro':
             p.y -= min(7.0, 0.5 + self.state_t * 0.06)
-            p.invuln = 2
             p.flicker += 1
         else:
             p.update(inp)
@@ -448,7 +449,7 @@ class GameScene:
         B.update_enemy_bullets(self)
         self.hazards.affect_bullets()
         self.update_beams()
-        if p.alive and self.state != 'outro':
+        if p.alive and self.state not in ('outro', 'clear'):
             self.collide()
         else:
             self.collide_player_bullets()
@@ -498,6 +499,8 @@ class GameScene:
                 self.state_t = 0
                 self.boss = bosses.create(self, plan.boss_id)
                 self.boss_t = 0
+                if plan.end_kind != 'frigate':
+                    self.banner(self.boss.name, (255, 200, 200), 120, 1)
                 self.app.audio.play_music(('boss', self.sector) if plan.end_kind != 'frigate'
                                           else ('frigate', self.sector))
         elif st == 'boss':
@@ -550,8 +553,11 @@ class GameScene:
             self.state_t = 0
 
     def boss_defeated(self, boss):
-        self.stats['boss_time'] = self.boss_t
         self.hazards.shutdown()
+        if not self.player.alive:
+            return          # you went down first: the death stands
+        self.stats['boss_time'] = self.boss_t
+        self.player.safe = True
         self.state = 'clear'
         self.state_t = 0
         self.timescale = 0.3
@@ -750,6 +756,10 @@ class GameScene:
         self.draw_banners(out)
         if self.frame < self.intro_frames + 60 and self.state == 'waves':
             hud.draw_intro_card(out, self)
+        p = self.player
+        if p.alive and p.hp == 1 and p.shield == 0 and (self.frame // 20) % 2 == 0:
+            for i, c in enumerate(((200, 20, 40), (120, 10, 30))):
+                pygame.draw.rect(out, c, (i, i, PF_W - i * 2, PF_H - i * 2), 1)
         ox, oy = self.fx.offset()
         screen.fill((0, 0, 0))
         screen.blit(out, (PF_X + ox, oy))

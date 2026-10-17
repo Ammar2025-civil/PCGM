@@ -720,7 +720,7 @@ def hull_geometry(hull_id):
     s = hull_sprite(hull_id)
     w, h = s.get_size()
     m = pygame.mask.from_surface(s)
-    cx, cy = w / 2.0, h / 2.0
+    cy = h / 2.0
     # widest row in the lower 70% = wing line
     best_y, best_w = h // 2, 0
     for y in range(int(h * 0.3), h):

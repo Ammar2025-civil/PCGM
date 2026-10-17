@@ -21,7 +21,7 @@ ARCH = {
     'minelayer': dict(hp=18, score=420, credits=8, fire='mines', interval=95),
     'carrier':   dict(hp=24, score=800, credits=14, fire=None),
     'golden':    dict(hp=34, score=5000, credits=0, fire=None),
-    'larva':     dict(hp=2, score=60, credits=1, fire=None, contact=True),
+    'larva':     dict(hp=2, score=60, credits=0.3, fire=None, contact=True),
     'mini':      dict(hp=2, score=60, credits=1, fire=None, contact=True),
     'turret':    dict(hp=20, score=400, credits=7, fire='burst', interval=100),
     'nest':      dict(hp=70, score=1500, credits=24, fire='spawn', interval=110),
@@ -50,7 +50,7 @@ class Enemy:
         self.size = opts.get('size', 0)
         self.ore = opts.get('ore', False)
         if kind == 'asteroid':
-            self.hp = max(1.0, (4 + self.size * 2.2) * (0.6 + 0.4 * game.diff['enemy_hp']))
+            self.hp = max(1.0, (4 + self.size * 2.2) * (0.6 + 0.4 * game.diff['enemy_hp']) * hp_mult)
             self.maxhp = self.hp
             self.spr_frames = [art.asteroid_sprite(self.size, opts.get('seed', 1), self.ore)]
             for _ in range(3):
@@ -129,6 +129,8 @@ class Enemy:
         agg = g.diff['aggression']
         x, y = self.x, self.y + self.h / 2
         k = self.fire_kind
+        if k not in ('spawn', 'snipe'):
+            g.sfx('enemy_shot', 0.45)
         if k == 'aimed':
             n = 1 + (2 if agg > 0.55 and random.random() < agg else 0)
             B.aimed(g, x, y, 1.75, n, 14, 's', 0)
