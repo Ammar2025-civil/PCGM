@@ -10,6 +10,17 @@ A retro vertical space shooter in Python with pygame-ce. Every pixel and every s
 
 ---
 
+## Just want to play? Download the .exe
+
+Go to the repository's **Releases** page and download **`VoidVanguard.exe`** from the latest release:
+https://github.com/Ammar2025-civil/PCGM/releases/latest
+
+No Python needed. Double-click it to play. If Windows shows "Windows protected your PC", click **More info**, then **Run anyway** (the file isn't code-signed). It is rebuilt automatically on GitHub's Windows machines whenever the game code changes.
+
+The steps below are for running from the Python source instead.
+
+---
+
 ## 1. Check your Python version
 
 Open **Command Prompt** (or PowerShell) and type:
