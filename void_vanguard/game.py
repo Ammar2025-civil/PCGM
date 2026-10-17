@@ -551,6 +551,7 @@ class GameScene:
 
     def boss_defeated(self, boss):
         self.stats['boss_time'] = self.boss_t
+        self.hazards.shutdown()
         self.state = 'clear'
         self.state_t = 0
         self.timescale = 0.3
@@ -740,14 +741,15 @@ class GameScene:
         B.draw_enemy_bullets(pf, self.ebullets)
         self.hazards.draw_front(pf)
         self.draw_telegraphs(pf)
-        self.fx.draw_popups(pf)
-        if self.boss is not None and self.boss.alive and self.state == 'boss':
-            hud.draw_boss_bar(pf, self.boss)
-        self.draw_banners(pf)
-        if self.frame < self.intro_frames + 60 and self.state == 'waves':
-            hud.draw_intro_card(pf, self)
         self.fx.draw_flash(pf)
         out = pygame.transform.flip(pf, True, False) if self.mirror_x else pf
+        # text overlays go on after the mirror flip so they always read correctly
+        self.fx.draw_popups(out, self.mirror_x)
+        if self.boss is not None and self.boss.alive and self.state == 'boss':
+            hud.draw_boss_bar(out, self.boss)
+        self.draw_banners(out)
+        if self.frame < self.intro_frames + 60 and self.state == 'waves':
+            hud.draw_intro_card(out, self)
         ox, oy = self.fx.offset()
         screen.fill((0, 0, 0))
         screen.blit(out, (PF_X + ox, oy))

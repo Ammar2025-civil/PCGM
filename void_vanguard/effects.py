@@ -207,10 +207,11 @@ class Effects:
                 col = g[6] if frac > 0.5 else art.mix(g[6], (255, 90, 50), 0.6)
                 pygame.draw.circle(surf, col, (int(g[0]), int(g[1])), int(g[2]), w)
 
-    def draw_popups(self, surf):
+    def draw_popups(self, surf, mirror=False):
         for p in self.popups:
             if p[3] > 10 or p[3] % 4 < 2:
-                surf.blit(p[2], (int(p[0]), int(p[1])))
+                x = p[0] if not mirror else PF_W - p[0] - p[2].get_width()
+                surf.blit(p[2], (int(x), int(p[1])))
 
     def draw_flash(self, surf):
         if self.flash > 0:

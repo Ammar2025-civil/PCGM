@@ -445,9 +445,13 @@ def spawn_wave(g, w):
     side = w.get('side', rnd.choice((-1, 1)))
     hp = w.get('hp', 1.0)
 
+    minion = w.get('minion', False)
+
     def add(k, x, y, path, delay=0, **kw):
         def make():
-            g.add_enemy(Enemy(g, k, x, y, path, hp, **kw))
+            e = g.add_enemy(Enemy(g, k, x, y, path, hp, **kw))
+            if minion:
+                e.counts = False
         if delay:
             g.schedule(delay, make)
         else:

@@ -10,7 +10,7 @@ SIZES = {'s': 2, 'm': 3, 'l': 5, 'xl': 8}
 
 class EBullet:
     __slots__ = ('x', 'y', 'vx', 'vy', 'r', 'spr', 'grazed', 'ax', 'ay', 'life', 'kind',
-                 'delay', 'turn', 'spd', 'bounces', 'dmg', 'color', 'alive', 'ox', 'oy')
+                 'delay', 'turn', 'spd', 'bounces', 'dmg', 'color', 'alive', 'ox', 'oy', 'wb', 'well')
 
     def __init__(self, x, y, vx, vy, r, spr, kind='orb'):
         self.x, self.y, self.vx, self.vy = x, y, vx, vy
@@ -28,6 +28,8 @@ class EBullet:
         self.dmg = 1
         self.color = None
         self.alive = True
+        self.wb = 0          # bounces left off the playfield sides
+        self.well = None     # (x, y, k): spring pull toward a point
 
 
 class PBullet:
@@ -135,10 +137,19 @@ def update_enemy_bullets(game):
         if b.ax or b.ay:
             b.vx += b.ax
             b.vy += b.ay
+        if b.well is not None:
+            wx, wy, k = b.well
+            b.vx += (wx - b.x) * k
+            b.vy += (wy - b.y) * k
         if gx:
             b.vx += gx * 0.6
         b.x += b.vx
         b.y += b.vy
+        if b.wb and (b.x < 2 or b.x > PF_W - 2):
+            b.vx = -b.vx
+            b.x = 2 if b.x < 2 else PF_W - 2
+            b.wb -= 1
+            b.grazed = False
         if b.life > 0:
             b.life -= 1
             if b.life == 0:

@@ -273,6 +273,12 @@ class Crystals(System):
                 if push_out(p, c['rect']):
                     p.hit(1)
 
+    def spawn_at(self, x, y, w=14, h=34):
+        spr = art.crystal_sprite(w, h, self.rnd.randrange(8))
+        rect = pygame.Rect(0, 0, w - 2, h - 6)
+        rect.center = (int(x), int(y))
+        self.walls.append(dict(x=x, y=y, w=w, h=h, vy=0.45, spr=spr, rect=rect))
+
     def spawn(self):
         w = self.rnd.randrange(10, 17)
         h = self.rnd.randrange(26, 48)
@@ -365,14 +371,14 @@ class Flares(System):
                 push_out(p, d['rect'])
         if hasattr(g.bg, 'glow'):
             g.bg.glow = 0.0
-        if not self.active:
+        if not self.active and self.state == 'idle':
             return
         self.deb_t -= 1
         if self.deb_t <= 0:
             self.deb_t = int(self.rnd.uniform(140, 220) / (0.4 + self.i))
             self.spawn_debris()
         if self.state == 'idle':
-            if self.calm:
+            if self.calm or self.fight or not self.active:
                 return
             self.timer -= 1
             if self.timer <= 0:
@@ -422,6 +428,16 @@ class Flares(System):
     def end_fight(self):
         super().end_fight()
         self.state = 'idle'
+
+    def trigger(self):
+        """Start a flare right now (used by bosses)."""
+        if self.state != 'idle':
+            return
+        self.timer = 1
+        was = (self.active, self.fight, self.calm)
+        self.active, self.fight, self.calm = True, False, False
+        self.update()
+        self.active, self.fight, self.calm = was
 
     def affect_bullets(self):
         if not self.debris:
@@ -654,15 +670,22 @@ class Gravity(System):
     def strength(self):
         return 0.008 + 0.022 * self.i
 
+    forced = False
+
     def update(self):
         g = self.g
-        on = self.active and (not self.fight or self.main)
+        on = self.forced or (self.active and (not self.fight or self.main))
         target = self.side * self.strength() * (0.7 if self.fight else 1.0) if on else 0.0
         self.cur += (target - self.cur) * 0.02
         g.gravity_x = self.cur
         if hasattr(g.bg, 'side'):
             g.bg.side = self.side
-        if not on:
+        if not on or self.forced:
+            if self.forced and self.warn > 0:
+                self.warn -= 1
+                if self.warn == 0:
+                    self.side = -self.side
+                    g.fx.screen_flash(6, (180, 120, 255))
             return
         if self.warn > 0:
             self.warn -= 1
@@ -881,6 +904,28 @@ class HazardManager:
 
     def asteroid_destroyed(self, e):
         split_asteroid(self, e)
+
+    def ensure(self, mech, intensity=0.5):
+        """Get (or create) a mechanic so a boss can use it in its fight."""
+        for s in self.systems:
+            if isinstance(s, SYSTEMS[mech]):
+                return s
+        s = SYSTEMS[mech](self, self.game, intensity)
+        s.fight = True
+        self.systems.append(s)
+        if isinstance(s, Station):
+            self.station = s
+        return s
+
+    def shutdown(self):
+        """Boss is dead: stop every mechanic and put the screen back to normal."""
+        for s in self.systems:
+            s.active = False
+            s.fight = True
+            if isinstance(s, Gravity):
+                s.forced = False
+        self.game.mirror_x = False
+        self.game.scroll_mult = 1.0
 
     def draw_back(self, surf):
         for s in self.systems:

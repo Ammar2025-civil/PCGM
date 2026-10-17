@@ -47,6 +47,8 @@ def bot_input(g, inp, rnd, god=False):
     vx = pull_x + fx
     vy = pull_y + fy
     inp.dx = 1 if vx > 0.3 else (-1 if vx < -0.3 else 0)
+    if g.mirror_x:
+        inp.dx = -inp.dx   # a human sees the flipped screen, so their input is flipped too
     inp.dy = 1 if vy > 0.3 else (-1 if vy < -0.3 else 0)
     if rnd.random() < 0.002 and len(g.ebullets) > 40:
         inp.bomb = True
