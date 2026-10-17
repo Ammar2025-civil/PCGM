@@ -746,14 +746,14 @@ PART_PAL = make_pal((150, 156, 180), (255, 150, 40), glass=(120, 240, 255),
                     glow=(255, 170, 60), metal=(120, 126, 150))
 PART_ROWS = {
     # nose cannons (spread levels 2..5) - centred
-    'nose2': ["7..", "M..", "M.#", "M##"],
-    'nose3': ["7...", "M..9", "M..M", "M.#M", "M###"],
-    'nose4': ["7...9", "M...M", "M..#M", "M.###", "M####", ".4###"],
-    'nose5': ["..e...e", "..M...M", "7.M..#M", "M.M.##M", "M####AM", "MAA###A", ".44####"],
+    'nose2': ["9..", "M..", "M#.", "MA#"],
+    'nose3': ["9..9", "M..M", "M..M", "MA#M", ".A##"],
+    'nose4': ["9...9", "M.9.M", "M.M.M", "MAMAM", "#AAA#", ".###A"],
+    'nose5': ["e...e.", "9...9.", "M.e.M.", "M.M.M9", "MAMAMM", "#AAA#M", ".####A"],
     # wing pods (left side, mirrored for right)
-    'wing1': ["9", "M", "A", "A", "#"],
-    'wing2': ["9.9", "M.M", "MAM", "AAA", "###", ".#."],
-    'wing3': ["e.e.e", "M.M.M", "MMMMM", "AAAAA", "A###A", "#####", ".#.#."],
+    'wing1': [".9.", ".M.", "#A#", "#A#", "#A#", ".M."],
+    'wing2': [".9.9.", ".M.M.", "#MAM#", "#AAA#", "#A6A#", ".#M#."],
+    'wing3': [".9.9.9.", ".M.M.M.", "#M#M#M#", "#AAAAA#", "#A666A#", "#AAAAA#", ".##M##."],
     # missile racks (left side)
     'missile1': ["R.R", "W.W", "8.8", "7.7"],
     'missile2': ["R.R.R", "W.W.W", "8.8.8", "7.7.7", "MMMMM"],
@@ -773,13 +773,19 @@ _PART_MIRROR = {'nose': 'odd', 'laser': 'odd', 'rear': 'odd', 'wing': None,
                 'missile': None, 'magnet': None}
 
 
-def part_sprite(name, paint=None):
-    key = ('part', name, paint)
+def part_sprite(name, hull='falcon', paint=None):
+    """Parts are tinted with the hull's own colours so every ship keeps its identity."""
+    key = ('part', name, hull, paint)
     s = _cache.get(key)
     if s is None:
         stem = name.rstrip('0123456789')
         mirror = _PART_MIRROR.get(stem)
-        pal = PART_PAL if paint != 'gold' else hull_palette('falcon', 'gold')
+        if paint == 'gold':
+            pal = hull_palette(hull, 'gold')
+        else:
+            base = HULL_ART[hull]['pal']
+            pal = make_pal(base['body'], base['acc'], glass=(120, 240, 255), glow=(255, 170, 60),
+                           metal=(132, 138, 164))
         s = sprite(PART_ROWS[name], pal, mirror=mirror)
         _cache[key] = s
     return s

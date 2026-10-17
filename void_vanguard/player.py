@@ -179,9 +179,9 @@ class Player:
                 self.wing_t = 9
                 wx, wy = geo['wing']
                 angles = {1: (0,), 2: (0, 5), 3: (0, 5, 11)}[lo['wing']]
-                pod_w = art.part_sprite('wing%d' % lo['wing']).get_width()
+                pod_w = art.part_sprite('wing%d' % lo['wing'], self.hull).get_width()
                 for side in (-1, 1):
-                    px = x + side * (wx + pod_w / 2 - 1)
+                    px = x + side * (wx + pod_w / 2 - 2)
                     for a in angles:
                         r = math.radians(a * side)
                         add(PBullet(px, y + wy - 5, math.sin(r) * 8, -math.cos(r) * 8, dmg * 0.8,
@@ -378,43 +378,49 @@ class Player:
 
 
 def compose_ship(hull, lo, magnet=False, paint=None):
+    """Build the ship sprite with every attached part visible."""
     geo = art.hull_geometry(hull)
-    W, H = 72, 60
+    W, H = 76, 64
     cx, cy = W // 2, H // 2
     out = pygame.Surface((W, H), pygame.SRCALPHA)
     hs = art.hull_sprite(hull, paint)
 
+    def part(name):
+        return art.part_sprite(name, hull, paint)
+
     def put(s, x, y, flip=False):
         if flip:
             s = pygame.transform.flip(s, True, False)
-        out.blit(s, (int(cx + x - s.get_width() / 2), int(cy + y - s.get_height() / 2)))
+        out.blit(s, (int(round(cx + x - s.get_width() / 2)), int(round(cy + y - s.get_height() / 2))))
 
     wx, wy = geo['wing']
-    if lo['wing']:
-        ps = art.part_sprite('wing%d' % lo['wing'], paint)
-        off = wx + ps.get_width() / 2 - 1
-        put(ps, -off, wy - 2)
-        put(ps, off, wy - 2, True)
-    out.blit(hs, (cx - hs.get_width() // 2, cy - hs.get_height() // 2))
+    nx, ny = geo['nose']
+    # behind the hull: missile racks peek out ahead of the wings, wing pods hang off the tips
     if lo['missile']:
-        ps = art.part_sprite('missile%d' % lo['missile'], paint)
-        ux, uy = geo['under']
-        put(ps, -ux - 1, uy)
-        put(ps, ux + 1, uy, True)
-    if lo['spread'] >= 2:
-        ps = art.part_sprite('nose%d' % lo['spread'], paint)
-        nx, ny = geo['nose']
-        put(ps, 0, ny - ps.get_height() / 2 + 4)
-    if lo['laser']:
-        ps = art.part_sprite('laser%d' % lo['laser'], paint)
-        nx, ny = geo['nose']
-        put(ps, 0, ny + ps.get_height() / 2 + 3)
+        ps = part('missile%d' % lo['missile'])
+        ux = max(geo['under'][0], ps.get_width() / 2 + 2)
+        put(ps, -ux, wy - ps.get_height() / 2 - 1)
+        put(ps, ux, wy - ps.get_height() / 2 - 1, True)
+    if lo['wing']:
+        ps = part('wing%d' % lo['wing'])
+        off = wx + ps.get_width() / 2 - 2
+        put(ps, -off, wy - 1)
+        put(ps, off, wy - 1, True)
     if lo['rear']:
-        ps = art.part_sprite('rear%d' % lo['rear'], paint)
+        ps = part('rear%d' % lo['rear'])
         tx, ty = geo['tail']
-        put(ps, 0, ty + ps.get_height() / 2 - 2)
+        put(ps, 0, ty + ps.get_height() / 2 - 3)
+    out.blit(hs, (cx - hs.get_width() // 2, cy - hs.get_height() // 2))
+    # on top: the nose cannon grows forward, the laser lens sits on the tip
+    if lo['spread'] >= 2:
+        ps = part('nose%d' % lo['spread'])
+        put(ps, 0, ny - ps.get_height() / 2 + 3)
+    if lo['laser']:
+        ps = part('laser%d' % lo['laser'])
+        top = ny - (part('nose%d' % lo['spread']).get_height() - 3 if lo['spread'] >= 2 else 0)
+        put(ps, 0, top - ps.get_height() / 2 + 3)
     if magnet:
-        ps = art.part_sprite('magnet', paint)
-        put(ps, -wx * 0.55, wy - 7)
-        put(ps, wx * 0.55, wy - 7, True)
+        ps = part('magnet')
+        put(ps, -wx * 0.5, wy - 6)
+        put(ps, wx * 0.5, wy - 6, True)
     return out
